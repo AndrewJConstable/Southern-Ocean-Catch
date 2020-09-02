@@ -368,109 +368,63 @@ x <- CSBdata
 addmargins(xtabs(Green_Weight ~ Target_TXN_Code + GTY_Code, x))
 
 ```
-### Plot Total Catches per year of main groups  
-  
-Requirements for using this code:
-- create a data frame, pd (meaning plot data) with three variables : Season, Taxa, Tonnes
-- create factor from pd$Taxa and sort levels to make plotting standard
-
-      Groundfish: "N. rossii", "Toothfish", "Nototheniidae"  
-      Icefish:  "Mackerel Icefish", "Channichthyidae"  
-      Pelagic: "Krill", "Mesopelagic", "Silverfish", "Cephalopod"  
-      Crabs & important finfish by-catch: "Crab","Skate","Macrouridae","Bathydraconidae"  
-      Invertebrate by-catch and sharks: "Benthos","Shark"  
-
-      Other bycatch not used (very low counts): "Crustacea","Flying Bird",  
-             "Lobster", "Other","Shrimp","Zooplankton" - plot total catch over years 
-
+### Plot Total Catches per year of main groups
 
 ```{r,echo=FALSE}
 CSBdata[,"TaxaPlot"]<-CSBdata[,"Taxa_Group"]
-CSBdata[CSBdata[,"Catch_TXN_Code"]=="TOP" | CSBdata[,"Catch_TXN_Code"]=="TOA" | CSBdata[,"Catch_TXN_Code"]=="TOT","TaxaPlot"]<-"Toothfish" # toothfish
-CSBdata[CSBdata[,"Catch_TXN_Code"]=="NOR","TaxaPlot"]<-"N. rossii" # Notothenia rossii
-CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANS","TaxaPlot"]<-"Silverfish" # Pleurogramma
-CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANI","TaxaPlot"]<-"Mackerel Icefish" # mackerel icefish
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="TOP" | CSBdata[,"Catch_TXN_Code"]=="TOA" | CSBdata[,"Catch_TXN_Code"]=="TOT","TaxaPlot"]<-"TOT" # toothfish
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="NOR","TaxaPlot"]<-"NOR" # Notothenia rossii
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANS","TaxaPlot"]<-"ANS" # Pleurogramma
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANI","TaxaPlot"]<-"ANI" # mackerel icefish
 res<-xtabs(Green_Weight ~ Season + TaxaPlot, CSBdata)
-# order the columns to help plotting
-# Groundfish: #14 "NOR"; #20 "TOT" ; #15 "Nototheniidae"  
-# Icefish:    # 1 "ANI"; # 6 "Channichthyidae"
-# Pelagic:    #10 "Krill"; #13 "Mesopelagic"; # 2 "ANS"; # 5 "Cephalopod"
-# Other fisheries: # 7 "Crab"
-# Bycatch:    #19 "Skate"; #12 "Macrouridae"; # 3 "Bathydraconidae"; # 4 "Benthos"
-# Other bycatch: #21 "Zooplankton"; # 8 "Crustacea"; #11 "Lobster"; #18 "Shrimp"; #17 "Shark"; # 9 "Flying Bird"; #16 "Other"
-
-# check order of columns for plotting
-res<-res[,c(14,20,15,1,6,10,13,2,5,7,19,12,3,4,21,8,11,18,17,9,16)]
-
 Season<-rep(as.numeric(dimnames(res)[[1]]),ncol(res))
 Taxa<-as.vector(matrix(rep(dimnames(res)[[2]],nrow(res)),ncol=ncol(res),byrow=TRUE))
 
 pd<-data.frame(Season,Taxa,as.numeric(as.vector(res)))
 
 dimnames(pd)[[2]]<-c("Season","Taxa","Tonnes")
-
-pd$Taxa<-factor(pd$Taxa,levels=c("N. rossii","Toothfish","Nototheniidae","Mackerel Icefish","Channichthyidae","Krill","Mesopelagic","Silverfish","Cephalopod","Crab","Skate","Macrouridae","Bathydraconidae","Benthos","Zooplankton","Crustacea","Lobster","Shrimp","Shark","Flying Bird","Other"))
-
+pd[,"Taxa"]<-as.factor(pd[,"Taxa"])
 # in order to plot on log10 axis - make zeros equal to 1E-2
-pd[pd[,"Tonnes"]<1E-2,"Tonnes"]<-1E-2
+pd[pd[,"Tonnes"]==0,"Tonnes"]<-1E-2
 ```
+
+Groundfish: "NOR", "TOT", "Nototheniidae"
+Icefish:  "ANI", "Channichthyidae"
+Pelagic: "Krill", "Mesopelagic", "ANS", "Cephalopod"
+Other fisheries: "Crab"
+Bycatch:  "Skate", "Macrouridae", "Bathydraconidae", "Benthos"
+Other bycatch: "Crustacea","Flying Bird","Lobster", "Other","Shark","Shrimp","Zooplankton"  
 
 
 ```{r,echo=FALSE}
-# Groundfish
-p <- ggplot(pd[pd[,"Taxa"]=="N. rossii" | pd[,"Taxa"]=="Toothfish" | pd[,"Taxa"]=="Nototheniidae",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(linetype=Taxa), col="darkslategrey", size=1) + scale_linetype_manual(values=c("solid","dashed","dotted"))
+
+
+# Groundfish: "NOR", "TOT", "Nototheniidae"
+p <- ggplot(pd[pd[,"Taxa"]=="NOR" | pd[,"Taxa"]=="TOT" | pd[,"Taxa"]=="Nototheniidae",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(col=Taxa,linetype=Taxa), size=1.5) + scale_color_manual(values=c("darkslategrey","darkslategrey","darkslategrey","darkslategrey")) + scale_linetype_manual(values=c("solid","dashed","dotted"))
 
 p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Groundfish")
 p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
 p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
 p
 ```
-```{r,echo=FALSE}
-# Icefish: 
-p <- ggplot(pd[pd[,"Taxa"]=="Mackerel Icefish" | pd[,"Taxa"]=="Channichthyidae",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(linetype=Taxa), col= "darkblue", size=1) + scale_linetype_manual(values=c("solid","dashed"))
 
-p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Icefish")
-p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
-p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
-p
+# Icefish:  "ANI", "Channichthyidae"
+
+# Pelagic: "Krill", "Mesopelagic", "ANS", "Cephalopod"
+
+p <- ggplot(res) 
+p<-p + labs(x = "Season", y ="Catch (tonnes)")
+
+p<-p+geom_line(aes(x=Seasons, y = Krill),col="tomato4",size=1.5, linetype="solid")
+
+# Other fisheries: "Crab"
+
+# Bycatch:  "Skate", "Macrouridae", "Bathydraconidae", "Benthos"
+
+# Other bycatch: "Crustacea","Flying Bird","Lobster", "Other","Shark","Shrimp","Zooplankton"  
+
+
 ```
-
-
-```{r,echo=FALSE}
-# Pelagic:
-p <- ggplot(pd[pd[,"Taxa"]=="Krill" | pd[,"Taxa"]=="Mesopelagic" | pd[,"Taxa"]=="Silverfish" | pd[,"Taxa"]=="Cephalopod",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(col=Taxa,linetype=Taxa), size=1) + scale_linetype_manual(values=c("solid","solid","solid","solid")) +
-  scale_colour_discrete(aesthetics=c("sienna4","burlywood4","azure4","lightblue"))
-
-p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Pelagic")
-p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
-p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
-p
-```
-
-
-
-```{r,echo=FALSE}
-# Crabs & important finfish by-catch
-p <- ggplot(pd[pd[,"Taxa"]=="Crab" | pd[,"Taxa"]=="Skate" | pd[,"Taxa"]=="Macrouridae" | pd[,"Taxa"]=="Bathydraconidae",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(col=Taxa,linetype=Taxa), size=1) + scale_linetype_manual(values=c("solid","solid","solid","solid")) +
-  scale_colour_discrete(aesthetics=c("sienna4","burlywood4","azure4","lightblue"))
-
-p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Crabs & important finfish by-catch")
-p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
-p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
-p
-```
-
-```{r,echo=FALSE}
-# Invertebrate by-catch and sharks: "Benthos","Shark"
-p <- ggplot(pd[pd[,"Taxa"]=="Benthos" | pd[,"Taxa"]=="Zooplankton" | pd[,"Taxa"]=="Shark",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(col=Taxa,linetype=Taxa), size=1) + scale_linetype_manual(values=c("solid","solid","solid")) +
-  scale_colour_discrete(aesthetics=c("sienna4","burlywood4","azure4"))
-
-p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Invertebrate by-catch, sharks")
-p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
-p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
-p
-```
-
 
   
 ### Catches by Statistical Area
