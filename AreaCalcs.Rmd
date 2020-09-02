@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-"topoval" "cell"    "area"    "lon"     "lat"     "subarea" "measo" 
+
 
 ```{r echo=FALSE}
 # Seabed_file<-"C:\\_w\\_d\\Catch\\etopo2_ccamlr_measo\\etopo2_ccammlr_measo.rds"

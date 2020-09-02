@@ -13,7 +13,7 @@ library(ggplot2)
 library(png) # for grabbing dimensions of png files
 
 
-setwd('C:\\_w\\_d\\Catch\\')
+WorkDir<-('C:\\_w\\_d\\Catch\\')
 
 ```
 
@@ -42,7 +42,7 @@ The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@r
   
   
 ```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show='hold', fig.align='center', echo=FALSE}
-knitr::include_graphics(c("CCAMLR_areas.png","MEASO_areas.png"))
+knitr::include_graphics(c(paste(WorkDir,"CCAMLR_areas.png",sep=""),paste(WorkDir,"MEASO_areas.png",sep="")))
 ```
   
     
@@ -55,7 +55,7 @@ In Subarea 48.3, the shelf area is wholly contained within the Subantarctic Zone
 [placeholder - describe how the division into MEASO areas was done and when the haul by haul took over.  Area 88 data should be correct because it was later]
   
 ```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
-knitr::include_graphics("MEASO-CCAMLR_combined_areas.png")
+knitr::include_graphics(paste(WorkDir,"MEASO-CCAMLR_combined_areas.png",sep=""))
 ```
 
 Some catch and effort data are only allocated to statistical reporting areas without haul geolocations.  Those data were approximately allocated to MEASO areas according to a straight forward set of rules based on the target fishery from which the data came.  
@@ -66,35 +66,35 @@ Some catch and effort data are only allocated to statistical reporting areas wit
 The CCAMLR Statistical Bulletin 2019 comprised separate catch and effort files, along with files containing data on each of the factors.  The following provides the first few lines of each loaded file.  
   
 ```{r CSB-Data-Load, echo=FALSE}
-CSBdata<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryCatch.csv', header = TRUE, sep = ",", dec = ".")
+CSBdata<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryCatch.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Catch data\n")
 head(CSBdata)
 
-CEdata<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryEffort.csv', header = TRUE, sep = ",", dec = ".")
+CEdata<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryEffort.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Effort data\n")
 head(CEdata)
 
-CRcountry<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataCountry.csv', header = TRUE, sep = ",", dec = ".")
+CRcountry<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataCountry.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Reference data - country\n")
 head(CRcountry)
 
-CRfishingActivity<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingActivity.csv', header = TRUE, sep = ",", dec = ".")
+CRfishingActivity<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingActivity.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Reference data - fishing activity\n")
 head(CRfishingActivity)
 
-CRfishingGear<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingGear.csv', header = TRUE, sep = ",", dec = ".")
+CRfishingGear<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingGear.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Reference data - fishing gear\n")
 CRfishingGear
 
-CRgeographicArea<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataGeographicArea_to_MEASO.csv', header = TRUE, sep = ",", dec = ".")
+CRgeographicArea<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataGeographicArea_to_MEASO.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Reference data - geographic area\n")
 head(CRgeographicArea)
 
-CRvesselSize<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataVesselSize.csv', header = TRUE, sep = ",", dec = ".")
+CRvesselSize<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataVesselSize.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Reference data - vessel size\n")
 head(CRvesselSize)
 
-CSB_taxa<-read.csv2('.\\CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv', header = TRUE, sep = ",", dec = ".")
+CSB_taxa<-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 cat("CSB Reference data - taxa (with major and minor groups by the author)\n")
 head(CSB_taxa)
 
@@ -207,7 +207,18 @@ dimnames(CSBdata)[[2]][length(names(CSBdata))]<-"Fishery_type"
   
 The identification of target species on the submission forms seemed very poor in the early years with obvious misassignments.  **These were not used in the final analysis**.  Instead, the gear code was used to determine the type of fishery.
 
-**Gear Group**
+**Gear Group**  
+  
+CSB data: Catch for each gear type in each year  
+  
+  
+```{r, echo=FALSE}
+addmargins(xtabs(Green_Weight ~ Calendar_Year + GTY_Code, CSBdata))
+
+
+```
+
+
 In order to simplify comparisons, all otter trawls were grouped into one gear group.  Other trawls were also grouped.  
 
 ```{r CSB_Gear_Group, echo=FALSE}
@@ -277,7 +288,8 @@ CSBdata variables:
 [16] "CSB_Stat_Area"   "Taxa_Group"
 
 
-```{CSB-Fishing type-x-TaxaGroup-inYears, echo=FALSE}
+```{r CSB-Fishing type-x-TaxaGroup-inYears, echo=FALSE}
+
 # check for missing values
 cat("Fishing type: check for missing values\n     Number of records = "
     ,nrow(CSBdata),"  : Records not missing = ",length(CSBdata[!is.na(CSBdata[,"GTY_Code"]),"GTY_Code"]))
@@ -316,6 +328,103 @@ Summary01
 ```
   
   
+**Check catch of target species in other fisheries**
+
+```{r , echo=FALSE}
+# cross tab of combined otter trawl data
+#x<-CSBdata[CSBdata[,"GTY_Code"]=="OTM",c("Catch_TXN_Code","Season","Green_Weight")]
+#CSB_taxa[CSB_taxa[,"TXN_Code"] %in% unique(x[,"Catch_TXN_Code"]),]
+#x<-x[x[,"Green_Weight"]>300,]
+#addmargins(xtabs(Green_Weight ~ Season + Catch_TXN_Code, x))
+
+cat("Catch of toothfish in other fisheries","\n")
+x <- CSBdata[CSBdata[,"Catch_TXN_Code"]=="TOT"| CSBdata[,"Catch_TXN_Code"]=="TOA" | CSBdata[,"Catch_TXN_Code"]=="TOP",]
+addmargins(xtabs(Green_Weight ~ Season + Target_TXN_Code, x))
+
+cat("Catch of krill in other fisheries","\n")
+x <- CSBdata[CSBdata[,"Catch_TXN_Code"]=="KRI",]
+addmargins(xtabs(Green_Weight ~ Season + Target_TXN_Code, x))
+
+cat("Catch of myctophids in other fisheries","\n")
+x <- CSBdata[CSBdata[,"Taxa_Group"]=="Mesopelagic",]
+addmargins(xtabs(Green_Weight ~ Season + Target_TXN_Code, x))
+
+cat("Catch of silver fish in other fisheries","\n")
+x <- CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANS",]
+addmargins(xtabs(Green_Weight ~ Season + Target_TXN_Code, x))
+
+cat("Catch of mackerel icefish in other fisheries","\n")
+x <- CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANI",]
+addmargins(xtabs(Green_Weight ~ Season + Target_TXN_Code, x))
+```
+
+```{r , echo=FALSE}
+#cat("Total Catch by year for each fishery","\n")
+#x <- CSBdata
+#addmargins(xtabs(Green_Weight ~ Season + Target_TXN_Code, x))
+cat("Total Catch by geartype for each fishery","\n")
+x <- CSBdata
+addmargins(xtabs(Green_Weight ~ Target_TXN_Code + GTY_Code, x))
+
+```
+### Plot Total Catches per year of main groups
+
+```{r,echo=FALSE}
+CSBdata[,"TaxaPlot"]<-CSBdata[,"Taxa_Group"]
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="TOP" | CSBdata[,"Catch_TXN_Code"]=="TOA" | CSBdata[,"Catch_TXN_Code"]=="TOT","TaxaPlot"]<-"TOT" # toothfish
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="NOR","TaxaPlot"]<-"NOR" # Notothenia rossii
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANS","TaxaPlot"]<-"ANS" # Pleurogramma
+CSBdata[CSBdata[,"Catch_TXN_Code"]=="ANI","TaxaPlot"]<-"ANI" # mackerel icefish
+res<-xtabs(Green_Weight ~ Season + TaxaPlot, CSBdata)
+Season<-rep(as.numeric(dimnames(res)[[1]]),ncol(res))
+Taxa<-as.vector(matrix(rep(dimnames(res)[[2]],nrow(res)),ncol=ncol(res),byrow=TRUE))
+
+pd<-as.data.frame(cbind(Season,Taxa,as.vector(res)))
+
+dimnames(pd)[[2]]<-c("Season","Taxa","Tonnes")
+pd[,"Taxa"]<-as.factor(pd[,"Taxa"])
+
+```
+
+Groundfish: "NOR", "TOT", "Nototheniidae"
+Icefish:  "ANI", "Channichthyidae"
+Pelagic: "Krill", "Mesopelagic", "ANS", "Cephalopod"
+Other fisheries: "Crab"
+Bycatch:  "Skate", "Macrouridae", "Bathydraconidae", "Benthos"
+Other bycatch: "Crustacea","Flying Bird","Lobster", "Other","Shark","Shrimp","Zooplankton"  
+
+
+```{r,echo=FALSE}
+# in order to plot on log10 axis - make zeros equal to 1E-2
+#res[res==0]<-1E-2
+
+# Groundfish: "NOR", "TOT", "Nototheniidae"
+p <- ggplot(pd[pd[,"Taxa"]=="NOR" | pd[,"Taxa"]=="TOT" | pd[,"Taxa"]=="Nototheniidae",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line() + geom_line(aes(col=Taxa,lintetype=Taxa)) + scale_color_manual(values=c("darkslategrey","darkslategrey","darkslategrey","darkslategrey"))
+
+p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Groundfish")
+p<-p+scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)))
+p
+```
+
+# Icefish:  "ANI", "Channichthyidae"
+
+# Pelagic: "Krill", "Mesopelagic", "ANS", "Cephalopod"
+
+p <- ggplot(res) 
+p<-p + labs(x = "Season", y ="Catch (tonnes)")
+
+p<-p+geom_line(aes(x=Seasons, y = Krill),col="tomato4",size=1.5, linetype="solid")
+
+# Other fisheries: "Crab"
+
+# Bycatch:  "Skate", "Macrouridae", "Bathydraconidae", "Benthos"
+
+# Other bycatch: "Crustacea","Flying Bird","Lobster", "Other","Shark","Shrimp","Zooplankton"  
+
+
+```
+
+  
 ### Catches by Statistical Area
 
 ```{Catches-Stat-Area,echo=FALSE}
@@ -343,7 +452,7 @@ Summary02
 CCAMLR provided the data in a CSV file 'extract_462_MEASO_areas.csv'.  It was noted that the data were released in accordance with CCAMLR Data Access Rules.  It was also noted that data prior to 1995 may not be complete; checks need to be made against the statistical bulletin.  Annotations on each column were provided:  
   
 ```{r MEASO-Catch-Data-Load, echo=FALSE}
-MCdata<-read.csv2('.\\CCAMLR-MEASO\\extract_462_MEASO_areas.csv', header = TRUE, sep = ",", dec = ".")
+MCdata<-read.csv2(paste(WorkDir,'CCAMLR MEASO extraction\\extract_462_MEASO_areas.csv',sep=""), header = TRUE, sep = ",", dec = ".")
 
 #check each column
 print ("Factors: Unique values in raw data file")
