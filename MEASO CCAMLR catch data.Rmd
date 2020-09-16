@@ -439,7 +439,7 @@ p
 ```{r,echo=FALSE}
 # Pelagic:
 p <- ggplot(pd[pd[,"Taxa"]=="Krill" | pd[,"Taxa"]=="Mesopelagic" | pd[,"Taxa"]=="Silverfish" | pd[,"Taxa"]=="Cephalopod",],aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(col=Taxa,linetype=Taxa), size=1) + scale_linetype_manual(values=c("solid","solid","solid","solid")) +
-  scale_colour_discrete(aesthetics=c("sienna4","burlywood4","azure4","lightblue"))
+  scale_colour_manual(values=c("sienna4","burlywood4","azure4","lightblue"))
 
 p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Pelagic")
 p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
@@ -470,7 +470,130 @@ p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = t
 p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
 p
 ```
+### Plot Total Catches per year of groundfish, icefish & krill
 
+```{r,echo=FALSE}
+
+Groundfish<-pd[pd[,"Taxa"]=="N. rossii","Tonnes"] +  
+            pd[pd[,"Taxa"]=="Toothfish","Tonnes"] + 
+            pd[pd[,"Taxa"]=="Nototheniidae","Tonnes"]
+Icefish<-pd[pd[,"Taxa"]=="Mackerel Icefish","Tonnes"] + 
+         pd[pd[,"Taxa"]=="Channichthyidae","Tonnes"]
+
+pd1<-pd[pd[,"Taxa"]=="Nototheniidae" | pd[,"Taxa"]=="Channichthyidae" | pd[,"Taxa"]=="Krill",]
+pd1[pd1[,"Taxa"]=="Nototheniidae","Tonnes"]<-Groundfish
+pd1[pd1[,"Taxa"]=="Channichthyidae","Tonnes"]<-Icefish
+
+
+p <- ggplot(pd1,aes(x=Season,y=Tonnes,group=Taxa))+geom_line(linetype="blank") + geom_line(aes(linetype=Taxa, col=Taxa),size=1.5) + scale_linetype_manual(values=c("solid","solid","solid")) +
+scale_colour_manual(values=c("darkslategrey","thistle4","darkorange4"))
+
+p<-p + labs(x = "Season", y ="Catch (tonnes)", title="Antarctic fisheries catch history")
+p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E-2,1E6)) + annotation_logticks()
+p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"),
+           axis.text=element_text(size=16),
+           axis.title=element_text(size=18,face="bold"))
+p
+
+ggsave("C:\\_w\\_d\\Catch\\Antarctic_fisheries_catch_history.png")
+
+
+```
+
+
+
+
+### Plot Total Catches per year by country for groundfish, icefish, pelagic  
+  
+Requirements for using this code:
+- create a data frame, pd (meaning plot data) with three variables : Season, Taxa, Tonnes
+- create factor from pd$Taxa and sort levels to make plotting standard
+
+      Groundfish: "N. rossii", "Toothfish", "Nototheniidae"  
+      Icefish:  "Mackerel Icefish", "Channichthyidae"  
+      Pelagic: "Krill", "Mesopelagic", "Silverfish", "Cephalopod"  
+      Crabs & important finfish by-catch: "Crab","Skate","Macrouridae","Bathydraconidae"  
+      Invertebrate by-catch and sharks: "Benthos","Shark"  
+
+      Other bycatch not used (very low counts): "Crustacea","Flying Bird",  
+             "Lobster", "Other","Shrimp","Zooplankton" - plot total catch over years 
+
+
+```{r,echo=FALSE}
+CSBsub<-CSBdata[CSBdata[,"TaxaPlot"] %in% c("N. rossii", "Toothfish", "Nototheniidae"),]
+x<-aggregate(CSBsub[,"Green_Weight"],by=list(CSBsub[,"Flag_CTY_Code"]),sum)
+dimnames(x)[[2]]<-c("CTY_Code","Tonnes")
+x[,"Country"]<- CRcountry[CRcountry[,"CTY_Code"]  %in%  x[,"CTY_Code"],"CTY_Name"]
+
+p<-ggplot(x,aes(x=Country, y=Tonnes)) + geom_bar(stat="identity")
+p<-p + labs(x = "Country", y ="Catch (tonnes)", title="Groundfish: total catch by country")
+p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) #+ annotation_logticks(sides="l")
+p<-p+theme(axis.line = element_line(colour = "black", size=1, linetype="solid"))
+p<-p + coord_flip()
+p
+
+```
+
+```{r,echo=FALSE}
+Threshold<-1E3
+CSBsubGTthreshold<-CSBsub[CSBsub[,"Flag_CTY_Code"] %in% sort(unique(x[x[,"Tonnes"]>=Threshold,"CTY_Code"])),]
+res<-xtabs(Green_Weight ~ Season + Flag_CTY_Code,CSBsubGTthreshold)
+
+FirstFishYear<-NULL
+for (i in 1:ncol(res)) FirstFishYear<-c(FirstFishYear,min(as.numeric(dimnames(res)[[1]])[which(res[,i]>0)]))
+CountryPlotInfo<-cbind(1:length(FirstFishYear),FirstFishYear)
+CountryPlotInfo<-CountryPlotInfo[order(CountryPlotInfo[,"FirstFishYear"]),]
+nlinetypes<-4
+nlinecols<-ceiling(nrow(CountryPlotInfo)/nlinetypes)
+
+CountryPlotInfo <- cbind(CountryPlotInfo,
+                         as.vector( matrix( rep(c(1:nlinecols),nlinetypes), 
+                                            nrow=nlinetypes,
+                                            byrow=TRUE)
+                                  )[1:nrow(CountryPlotInfo)]
+                         ) # end bind
+CountryPlotInfo <- as.data.frame(cbind(dimnames(res)[[2]][CountryPlotInfo[,1]],as.data.frame(cbind(c(1:nrow(CountryPlotInfo)),CountryPlotInfo,
+                         rep(c(1:nlinetypes),nlinecols)[1:nrow(CountryPlotInfo)] 
+                         )))) # end bind
+
+dimnames(CountryPlotInfo)[[2]]<-c("CTYid", "Order","CTYidN","FirstYear","Col","Lty")
+
+PlotColours<-c("black","red","blue","orange","green")
+PlotLtypes<-c("solid","dashed","dotted","dotdash")
+
+
+library("tidyr")
+library("dplyr")
+res1<-as.data.frame(cbind(as.numeric(dimnames(res)[[1]]),res))
+dimnames(res1)[[2]][1]<-"Season"
+res2 <- res1 %>% pivot_longer(!Season,names_to = "CTY_Code",values_to = "Tonnes")
+Ccode<-pull(res2,"CTY_Code")
+Order<-CountryPlotInfo[match(Ccode,CountryPlotInfo[,"CTYid"]),"Order"]
+res2<-cbind(res2,Order)
+res2<-res2[order(res2[,"Order"],res2[,"Season"]),]
+
+
+
+df <- gather(by_year_percentage, key = measure, value = Rate, 
+c("deathpercentage", "tamponadepercentage", "protaminepercentage"))
+
+ggplot(df, aes(x=arrivaldate, y = Rate, group = measure, colour = measure)) + 
+geom_line()
+
+
+
+# order the columns to help plotting
+
+Season<-rep(as.numeric(dimnames(res)[[1]]),ncol(res))
+Country<-as.vector(matrix(rep(dimnames(res)[[2]],nrow(res)),ncol=ncol(res),byrow=TRUE))
+
+pd<-data.frame(Season,Taxa,as.numeric(as.vector(res)))
+
+dimnames(pd)[[2]]<-c("Season","Country","Tonnes")
+
+# in order to plot on log10 axis - make zeros equal to 1E-2
+pd[pd[,"Tonnes"]<1E-2,"Tonnes"]<-1E-2
+```
 
   
 ### Catches by Statistical Area
