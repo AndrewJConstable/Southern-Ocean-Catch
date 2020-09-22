@@ -1,19 +1,49 @@
 ---
 title: "Areas of Seabed depths in MEASO and CCAMLR ASD areas"
-author: "Andrew Constable"
+author: "Andrew Constable & Mike Sumner"
 date: "31/08/2020"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+
+library(ggplot2)
+library(scales)
+library(png) # for grabbing dimensions of png files
+library(dplyr)
+
+
+# Editing and Development Notes:
+#
+# 1. Text and code relating to the maps is inherited from "MEASO CCAMLR catch data.rmd" which has the basic analyses testing the data.  
+            # The code here strips away the testing routines.
+#
+
+```
+
+# Introduction 
+  
+The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@ref(fig:CCAMLR-MEASO-areas).  
+  
+  
+```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show='hold', fig.align='center', echo=FALSE}
+knitr::include_graphics(c(paste(WorkDir,"CCAMLR_areas.png",sep=""),paste(WorkDir,"MEASO_areas.png",sep="")))
+```
+  
+    
+  
+```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
+knitr::include_graphics(paste(WorkDir,"MEASO-CCAMLR_combined_areas.png",sep=""))
 ```
 
 
 
 ```{r echo=FALSE}
-# Seabed_file<-"C:\\_w\\_d\\Catch\\etopo2_ccamlr_measo\\etopo2_ccammlr_measo.rds"
-
 Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\gebco_cells_2000m.rds"
 Seabed_areas <- readRDS(Seabed_file)
 cat("File with Seabed area data: ",Seabed_file,"\n",sep="")
@@ -40,20 +70,19 @@ MEASOarea<-sort(unique(Cbed[,"MEASO"]))
 
 
 
-# seabed areas from CCAMLR Statistical Bulletin (CSB - converted to square nautical miles i.e. multiply by 1/1.852^2 [= 3.429904])
-conversion<-1 # 1/1.852^2 
+# CCAMLR seabed areas are in km2
 
 # 0-600 m depth
-m0_600<-c(219745, 37431, 46435, 2254, 526672, 50766, 367887, 210302, 0, 399, 10374, 144396, 58399, 17534, 5414, 342091, 267789, 302111)*conversion
+m0_600<-c(219745, 37431, 46435, 2254, 526672, 50766, 367887, 210302, 0, 399, 10374, 144396, 58399, 17534, 5414, 342091, 267789, 302111)
 
 # 600-1800 m depth
-m600_1800<-c(84150, 73651, 67656, 25691, 150069, 89261, 177191, 98452, 20051, 129167, 23164, 130830, 118238, 43102, 30975, 243829, 118972, 115677)*conversion
+m600_1800<-c(84150, 73651, 67656, 25691, 150069, 89261, 177191, 98452, 20051, 129167, 23164, 130830, 118238, 43102, 30975, 243829, 118972, 115677)
 
 # deeper than 1800 m depth
-m1800plus<-c(318526, 745076, 915246, 916662, 1416504, 6134892, 4021956, 1189462, 485484, 550334, 2462471, 806884, 466281, 608828, 549379, 2111495, 4350752, 1766153)*conversion
+m1800plus<-c(318526, 745076, 915246, 916662, 1416504, 6134892, 4021956, 1189462, 485484, 550334, 2462471, 806884, 466281, 608828, 549379, 2111495, 4350752, 1766153)
  
 # total seabed area
-mTotal<-c(622421, 856158, 1029337, 944607, 2093245, 6274919, 4567034, 1498216, 505535, 679900, 2496009, 1082110, 642918, 669464, 585768, 2697415, 4737513, 2183941)*conversion
+mTotal<-c(622421, 856158, 1029337, 944607, 2093245, 6274919, 4567034, 1498216, 505535, 679900, 2496009, 1082110, 642918, 669464, 585768, 2697415, 4737513, 2183941)
 
 CSB_Cbed_nm<-data.frame(ASD[ASD!="Outside"],m0_600,m600_1800,m1800plus,mTotal)
 
@@ -120,6 +149,7 @@ print(Cbed_compare)
 # save areas
 
 ```
+
 ```{r echo=FALSE}
 # MEASO Areas from main document
 MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
@@ -152,13 +182,24 @@ fnPropInMarea<-function(i,ASD_depth,cbed_areas,M_areas){
                    cbed_areas[,"Depth"]==ASD_depth[i,"Depth"], c("MEASO","Area")]
      x[,"prop"]<-x[,"Area"]/sum(x[,"Area"])
      res[match(x[,"MEASO"],M_areas)]<-round(x[,"prop"],3)
-     return(c(ASD_depth[i,],res))
+     return(cbind(data.frame(ASD_depth[i,]),data.frame(matrix(res,ncol=16))))
      } # end fnPropInMarea
 
 # for each ASD,depthStratum combination, determine proportions across MEASO areas
-ASD_depth_propInMEASOareas<-do.call(rbind,lapply(c(1:nrow(ASD_depth_categories)),fnPropInMarea,ASD_depth_categories,Result,MEASOareas[,"Code"]))
+ASD_depth_propInMEASOareas<-bind_rows(lapply(c(1:nrow(ASD_depth_categories)),fnPropInMarea,ASD_depth_categories,Result,MEASOareas[,"Code"]))
+dimnames(ASD_depth_propInMEASOareas)[[2]]<- c("ASD","Depth",MEASOareas[,"Code"])
+
+for (d in seq(1,length(Depth_intervals),1)){
+DepthRange <- if(d<length(Depth_intervals)) paste(Depth_intervals[d]," : ",Depth_intervals[(d+1)]," m",sep="") else
+                                            paste("deeper than ",Depth_intervals[d]," m",sep = "")
+cat("\nDepth interval: ",DepthRange,"\n\n",sep="")
+print(ASD_depth_propInMEASOareas[ASD_depth_propInMEASOareas[,2]==Depth_intervals[d],c(1,3:18)])
+ }
+
 
 saveRDS(ASD_depth_propInMEASOareas,file="ASD_depth_propInMEASOareas.rds")
 
 
 ```
+
+

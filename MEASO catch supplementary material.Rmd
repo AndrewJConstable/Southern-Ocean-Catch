@@ -1,0 +1,553 @@
+---
+title: "MEASO fishery statistics"
+author: "Andrew Constable"
+date: "16/09/2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(scales)
+library(png) # for grabbing dimensions of png files
+library(dplyr)
+
+
+WorkDir<-('C:\\_w\\_d\\Catch\\')
+
+# Editing and Development Notes:
+#
+# 1. This code is inherited from "MEASO CCAMLR catch data.rmd" which has the basic analyses testing the data.  
+            # The code here strips away the testing routines.
+#
+
+```
+
+# Introduction  
+  
+MEASO has a number of chapters that refer to, or detail, the nature and scale of fisheries over time.  The aim of this vignette is to describe the history of fisheries in the Southern Ocean and how that history varies between MEASO areas.  Section 2 details finfish and krill fisheries in the Southern Ocean.  Sections 3 and 4 detail catches of whales and seals respectively.  Incidental mortality of seabirds is considered separately to Southern Ocean fisheries because of the mortality of Southern Ocean seabirds throughout the Southern Hemisphere. This is documented in Section 5.  
+   
+# Finfish and krill fisheries   
+  
+CCAMLR provides the main source of information on finfish and krill fisheries (www.ccamlr.org), although other sources are useful for clarifying the locations and scale of catches prior to the establishment of CCAMLR in 1980 (e.g. Duhamel Kerguelen) and for the scale of incidental mortality of Southern Ocean seabirds in longline fisheries in the Southern Hemisphere (www.acap.aq).  
+  
+Here I use catch and effort data available in the CCAMLR Statistical Bulletin (https://www.ccamlr.org/en/publications/statistical-bulletin) as the primary source of data (hereafter referred to as CSB data). After securing permission from data owners, the CCAMLR Secretariat extracted catch and effort data that could be assigned to MEASO areas, which were data submitted for each haul (hereafter referred to as Haul Data). As the latter data required geolocation of catches, these data were not inclusive of all data in the Statistical Bulletin.   
+  
+The reason for the discrepancy is that early data were not required to be submitted with haul information and, instead, were simply summaries of catch and effort by CCAMLR reporting areas - Statistical Areas, Subareas or Divisions (herafter ASD areas). The scale of aggregation of submitted data varied between reporting nation.  Even since the requirement for reporting by haul, there remains discrepancies between the aggregated Bulletin Data and aggregated Haul Data.  
+  
+The attributes of the Bulletin and Haul datasets are described in Section 2.1, along with the discrepancies between them.  
+  
+Sections 2.2 and 2.3 detail the two methods used to partition the CSB data into MEASO Areas:  
+- for finfish: proportion of fishable sea bed area (trawl and longline respectively) in CCAMLR ASD areas that fall within different MEASO areas, and
+- for krill: the approximate proportion of catch from CCAMLR ASD falling within different MEASO areas derived from fine-scale maps of decadal catch provided by the CCAMLR Secretariat in Kawaguchi & Nicol (2020).  
+  
+   
+## Relationship between CCAMLR and MEASO areas  
+  
+The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@ref(fig:CCAMLR-MEASO-areas).  
+  
+  
+```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show='hold', fig.align='center', echo=FALSE}
+knitr::include_graphics(c(paste(WorkDir,"CCAMLR_areas.png",sep=""),paste(WorkDir,"MEASO_areas.png",sep="")))
+```
+  
+    
+The MEASO areas do not perfectly align with CCAMLR areas (Figure \@ref(fig:CCAMLR-MEASO-overlay)).  
+
+  
+```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
+knitr::include_graphics(paste(WorkDir,"MEASO-CCAMLR_combined_areas.png",sep=""))
+```
+
+Where ASD areas overlap MEASO areas, the proportional distribution of depth strata relevant for fishing are given in the following table.  Data are rounded to two decimal places.  As a result, some rounding results in showing no overlap (proportion in one MEASO area = 1).
+
+
+```{r ASD_MEASO_compare, echo=FALSE}
+
+ASD_depth_propInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_propInMEASOareas.rds")
+
+Depth_intervals<-unique(ASD_depth_propInMEASOareas[,"Depth"])
+
+DepthRange<-NULL
+for (d in seq(1,length(Depth_intervals),1)){
+DepthRange <- if(d<length(Depth_intervals)) c(DepthRange,paste(-Depth_intervals[d],"-",-Depth_intervals[(d+1)]," m",sep="")) else
+                                            c(DepthRange,paste("> ",-Depth_intervals[d]," m",sep = ""))
+}
+Depth<-data.frame(Interval = Depth_intervals,Range = DepthRange)
+
+SplitASD<-apply(ASD_depth_propInMEASOareas[,c(3:16)],1,max)<1
+
+df<-ASD_depth_propInMEASOareas[SplitASD &   # only records that are split across areas, exclude "Outside" rows and columns
+                               ASD_depth_propInMEASOareas[,1]!="Outside",c(1:17)]
+df[,c(3:17)]<-round(df[,c(3:17)],2)
+SplitASD <- unique(df[,1])
+df<-cbind(df,Depth[match(df[,2],Depth[,1]),2])
+dimnames(df)[[2]][18]<-"DepthRange"
+
+
+for (a in seq(1,length(SplitASD),1)){
+cat("\nASD area: ",SplitASD[a],"\n\n",sep="")
+print.data.frame(df[df[,1]==SplitASD[a],c(18,3:17)],2,row.names = FALSE)
+ }
+  
+
+```
+
+
+### Rules for splitting catch from ASD areas into MEASO areas
+
+The matching of reporting areas and fisheries with MEASO areas had the greatest difficulty in Statistical Subareas 48.1 nd 48.3.  
+  
+In Subarea 48.1, the early groundfish fishery occurred around Elephant Island as well as around the islands off the West Antarctic Peninsula.  
+  
+In Subarea 48.3, the shelf area is wholly contained within the Subantarctic Zone, while the northern deep-water area, where krill fishing could occur, is in a retroflection of the Antarctic zone.  
+  
+[placeholder - describe how the division into MEASO areas was done and when the haul by haul took over.  Area 88 data should be correct because it was later]
+
+Some catch and effort data are only allocated to statistical reporting areas without haul geolocations.  Those data were approximately allocated to MEASO areas according to a straight forward set of rules based on the target fishery from which the data came.  
+
+  
+## CCAMLR Statistical Bulletin  
+  
+The CCAMLR Statistical Bulletin 2019 comprised separate catch and effort files, along with files containing data on each of the factors.  The following provides the first few lines of each loaded file.  
+  
+```{r CSB-Data-Load, echo=FALSE}
+CSBdata           <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryCatch.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CEdata            <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryEffort.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRcountry         <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataCountry.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRfishingActivity <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingActivity.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRfishingGear     <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingGear.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRgeographicArea  <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataGeographicArea_to_MEASO.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataVesselSize.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+```
+
+### Factor and variable descriptions
+
+Each of the variables in the CCAMLR Statistical Bulletin (CSB) tables are described here along with a printout of the levels in each.
+
+**AFC_ID**  Unique identifier for AGGREGATED FISHERY CATCH (system generated)[this identifier is in catch table but not included in the effort table]  
+
+**AFE_ID** Unique identifier for the related record in AGGREGATED FISHERY EFFORT (system generated)[this identifier is in both catch data and effort data and used to link the two tables] 
+
+**Flag_CTY_Code**  ISO 3 code for the flag of the fishing vessel(s).[in both catch and effort tables]  
+
+**Calendar_Year**  Calendar year (YYYY) when fishing occurred.[in both catch and effort tables]  
+
+**Month**  Month (MM) when fishing occurred.[in both catch and effort tables]  
+
+**GAR_Code**  Geographic area code for the statistical area, subarea or division where fishing occurred. [in both catch and effort tables]  
+
+**Target_TXN_Code**  3 alpha code for target taxon.[in both catch and effort tables]  
+
+**GTY_Code**  Code for the gear used during fishing.[in both catch and effort tables]  
+
+**FAC_Code**  Code for the fishing activity.[in both catch and effort tables]  
+
+**VSZ_Code**  Code for the size category of fishing vessels based on gross tonnage.[in both catch and effort tables]  
+
+**Catch_TXN_Code**  3 alpha code for each taxon caught.[only in catch table]  
+
+**Green_Weight**  Green weight (tonne) of the catch.[only in catch table]  
+
+**Fishing_Hours**  Total number of hours of fishing.[only in effort table]  
+
+**Fishing_Days**  Total number of days during which fishing occurred.[only in effort table]  
+
+**Vessel_Count**  Total number of vessels fishing.[only in effort table]  
+
+**Haul_Count**  Total number of hauls made during fishing.[only in effort table]  
+
+**Hook_Count**  Total number of hooks set. Applies to longline fishing only.[only in effort table]  
+
+**Pot_Count**  Total number of pots set. Applies to pot fishing only.[only in effort table]  
+  
+  
+### Approach to summarising fisheries  
+
+#### Target Fisheries
+  
+Records are assigned in the database to fisheries according to target species.  These are further grouped to differentiate earlier bottom trawl groundfish fisheries, which principally targetted *Notothenia rossii* and other notothenids, from the other fisheries.  The groundfish fisheries had various assignments of target species and are grouped here.  The assignment to target fishery groups are:
+
+
+```{r target-fisheries, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) in each major fishery in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
+TargetFishery<-CSB_taxa[unique(match(CSBdata[,"Target_TXN_Code"],CSB_taxa[,"TXN_Code"])),]
+TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     7,     1,     6,     5,      1,    2,     1 
+                                            ,    5,     1,     4,     8,     1,     2)
+                              ,TXN_Code = c( "TOT", "ANI", "SQS", "MZZ", "KRI", "LXX", "NOX", "ICX", "NOG"
+                                            ,"ELC", "GHP", "ANS", "KCX", "NOS", "WIC")
+  )
+TF_Plot_Order<-TF_Plot_Order[order(TF_Plot_Order[,"TFn"]),]
+
+TF_Names<-data.frame(TFn     = c(           1,        2,          3,           4,           5,      6,      7,      8)
+                    ,Fishery = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
+                    ,Colour  = c("darkslategray","grey80","bisque3","lightsteelblue1","thistle3","coral2","cadetblue4","salmon4"))
+
+# create vector to be added to CSBdata for the Target fishery for each record
+
+Fishery_type<-TF_Plot_Order[match(CSBdata[,"Target_TXN_Code"],TF_Plot_Order[,"TXN_Code"]),"TFn"]  # plot by number of Target Fishery to get right order 
+
+CSBdata<-cbind(CSBdata,Fishery_type)
+dimnames(CSBdata)[[2]][length(names(CSBdata))]<-"TFN"
+
+# add zeros for each Fishery*Decade 
+
+decade<-seq(1960,2010,10)
+TFzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,TFn){return(data.frame(Decade=rep(decade[t],length(TFn))
+                                                                                              ,Fishery=TFn
+                                                                                              ,Tonnes=rep(0,length(TFn))
+                                                                                              ))},decade,TF_Names[,"TFn"]))
+
+res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
+                ,Fishery=CSBdata[,"TFN"]
+                ,Tonnes = CSBdata[,"Green_Weight"])
+res1<-rbind(res1,TFzeros)
+res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Fishery"]),sum))
+dimnames(res)[[2]]<-c("Decade","Fishery","Tonnes")
+
+
+plotYlog<-TRUE
+
+if(plotYlog){
+  res[res[,"Tonnes"]<1,"Tonnes"]<-1
+   }
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Decade"]), y = res[,"Tonnes"], fill = factor(res[,"Fishery"]))),position = position_dodge(preserve = 'single'))
+p <- p + labs(x = "Decade", y ="Tonnes", fill = "Fishery",title="Total catch by decade for type of fishery")
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
+p <- p + scale_fill_discrete(name = "Fishery", breaks=levels(factor(res[,"Fishery"])),labels = TF_Names[as.character(TF_Names[,"TFn"])  %in%  levels(factor(res[,"Fishery"])),"Fishery"],type=TF_Names[,"Colour"]) # change legend labels
+
+p
+
+```
+  
+The identification of target species on the submission forms seemed very poor in the early years with obvious mis-assignments.  **These were not used in the final analysis**.  Instead, the gear code was used to determine the type of fishery.
+
+#### Gear Type  
+  
+Gear types in the CCAMLR Statistical Bulletin have been specifically identified as bottom and midwater trawls, hooks and lines, pots and traps, squid jigging and seines.  Fisheries prior to and during the first decade of CCAMLR were primarily trawls using the otter board method.  While these became regularly differentiated between bottom  and midwater trawling since that time, those early years had a large proportion of trawling not assigned to these categories (Otter Trawl nei).  Those unassigned otter trawls have been combined with bottom trawls because of the preponderance of groundfish fishing undertaken in those early years.  
+  
+  
+```{r GearType, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) for each major gear type in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
+#addmargins(xtabs(Green_Weight ~ Calendar_Year + GTY_Code, CSBdata))
+
+GT_Names<-data.frame(GTn      = c(   1,    2,    3,    4,   5,   6,    7,    8,   9,   10,  11)
+                    ,Gear     = c("TX","OT","OTB","TBB","OTM","TMB","TM","LLS","FPO","JIG","SX")
+                    ,Threshold = c(50 ,  50,   50,   50,   50,   50,  50,   30,   10,   50,  50)
+                    ,Colour   = c("grey5","grey20","grey35","grey50","darkslategray4","darkslategray3","darkslategray2","coral3","coral1","orchid3","firebrick"))
+
+
+
+
+
+# add zeros for each Fishery*Decade 
+
+decade<-seq(1960,2010,10)
+GTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,GT){return(data.frame(Decade=rep(decade[t],length(GT))
+                                                                                              ,Gear=GT
+                                                                                              ,Tonnes=rep(0,length(GT))
+                                                                                              ))},decade,GT_Names[,"GTn"]))
+
+res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
+                ,Gear=GT_Names[match(CSBdata[,"GTY_Code"],GT_Names[,"Gear"]),"GTn"]
+                ,Tonnes = CSBdata[,"Green_Weight"])
+res1<-rbind(res1,GTzeros)
+res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"]),sum))
+dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
+
+# exclude data
+res<-res[res[,"Gear"]!=1,]
+GT_Names<-GT_Names[GT_Names[,"GTn"]!=1,]
+res<-res[res[,"Gear"]!=4,]
+GT_Names<-GT_Names[GT_Names[,"GTn"]!=4,]
+
+plotYlog<-TRUE
+
+if(plotYlog){
+  res[res[,"Tonnes"]<1,"Tonnes"]<-1
+   }
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Decade"]), y = res[,"Tonnes"], fill = factor(res[,"Gear"]))),position = position_dodge(preserve = 'single'))
+p <- p + labs(x = "Decade", y ="Tonnes", fill = "Gear",title="Total catch by decade for gear type")
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
+p <- p + scale_fill_discrete(name = "Gear", breaks=levels(factor(res[,"Gear"]))
+                             ,labels = CRfishingGear[match(GT_Names[
+                                            match(as.character(GT_Names[,"GTn"]),levels(factor(res[,"Gear"])))
+                                            ,"Gear"],CRfishingGear[,"GTY_Code"]),"GTY_Name"]
+                             ,type=GT_Names[,"Colour"]) # change legend labels
+
+p
+
+```
+
+
+#### Summary by fishery
+
+Method: Data for a fishery is extracted from the Bulletin data and catches summed with the following factors: Year, Nation, Taxon. For each fishery, summaries are provided on:
+
+
+```{r Nations, echo=FALSE}
+
+
+CT_Names<-data.frame(
+          CTn      = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26)
+         ,CTY_Code = c("ARG", "AUS", "BGR", "CHL", "CHN", "FRA", "DDR", "DEU", "IND", "JPN", "KOR", "LVA", "NAM"
+                      ,"NOR", "NZL", "PAN", "POL", "RUS", "SUN", "UKR", "ZAF", "ESP", "GBR", "USA", "URY", "VUT")
+         ,Colour   = c("grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      , "grey25", "grey60")
+) # end dataframe
+```
+
+
+*Groundfish*
+
+
+```{r Fishery_Groundfish, echo=FALSE}
+
+Threshold <- matrix(c(seq(1,8,1),50,50,30,50,50,50,50,10),ncol=2,byrow=FALSE)
+dimnames(Threshold)[[2]]<-c("Fishery","Threshold")
+
+# taxonomic groups for reporting given catch thresholds
+
+tCode          <- c("TOP","TOA","GRV","MCC","SRX","RAJ","ANT","WGR","GR2","RFA","GR1","ANI","NOS","BYR","LIC","SRR","NOR"
+                    ,"ANS","GHP","NOG","NOT","NOX","ICX","KIF","SGI","SSI","WIC","KRI","LXX","MZZ","TRL","ELC","SQA","SPX","SQS","KCF","KCV")
+Catch_Group   <- c(4,5,6,6,7,7,8,6,6,7,6,3,10,7,9,7,1
+                   ,12,2,2,2,2,9,9,9,9,9,13,14,16,15,14,17,18,17,11,11)
+
+BT_name                     <- c("Notothenia rossii"
+                             ,"Other Groundfish"
+                             ,"Mackerel Icefish"
+                             ,"Dissostichus eleginoides"
+                             ,"Dissostichus mawsoni"
+                             ,"Grenadiers"
+                             ,"Skates & rays"
+                             ,"Antimora spp."
+                             ,"Other icefish"
+                             ,"Lepidonotothen squamifrons"
+                             ,"Crabs"
+                             ,"Silverfish"
+                             ,"Krill"
+                             ,"Myctophids"
+                             ,"Trematomus spp."
+                             ,"Unknown fish"
+                             ,"Squid"
+                             ,"Salps")
+
+BFTaxa <- data.frame(Code = tCode,Catch_Group) 
+Taxon_Name<-BT_name[match(BFTaxa[,"Catch_Group"],c(1:length(BT_name)))]
+BFTaxa<-cbind(BFTaxa,Taxon_Name)
+
+fnFishery_catch_summary<-function(f,dCSB,BFTaxa,Threshold,Fisheries){
+
+df1<-dCSB[dCSB[,"TFN"] %in% f,c("Flag_CTY_Code","Calendar_Year","Catch_TXN_Code","Green_Weight")]
+
+df2<-aggregate(df1[,"Green_Weight"],by=list(df1[,"Flag_CTY_Code"],df1[,"Catch_TXN_Code"],df1[,"Calendar_Year"]),sum)
+  dimnames(df2)[[2]]<-c("Nation","Taxon","Year","Tonnes")
+  
+# Summarise main catches by taxon
+     # 1. first aggregate by taxon, year
+     # 2. exclude taxa with annual catches not exceeding Threshold
+     # 3. summarise as taxon, total catch over the fishery  
+
+  df3<-aggregate(df2[,"Tonnes"],by=list(df2[,"Taxon"],df2[,"Year"]),sum)
+  dimnames(df3)[[2]]<-c("Taxon","Year","Tonnes")
+  df3<-df3[df3[,"Tonnes"]>Threshold[f,2],]
+  df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
+  dimnames(df4)[[2]]<-c("Taxon","Tonnes")
+  
+  df5<-data.frame(TaxaGroup = BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"],Tonnes = df4[,"Tonnes"])
+  df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
+  dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
+  df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
+  df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"]),"Taxon_Name"]
+ 
+cat("Catch summary for fishery: ",Fisheries[f,"Fishery"],"\n\n",sep="")   
+ print.data.frame(df7[,c(3,2)])
+cat("\n",sep="")   
+ 
+  } # end fishery_catch_summary
+
+summaryFisheryCatches<-bind_rows(lapply(c(1:8),fnFishery_catch_summary,CSBdata,BFTaxa,Threshold,TF_Names))
+
+
+fnGearType_catch_summary<-function(g,dCSB,BFTaxa,NamesList){
+
+
+df1<-dCSB[dCSB[,"GTY_Code"] %in% GT_Names[match(g, GT_Names[,"GTn"]),"Gear"],c("GTY_Code","Calendar_Year","Catch_TXN_Code","Green_Weight")]
+
+df2<-aggregate(df1[,"Green_Weight"],by=list(df1[,"GTY_Code"],df1[,"Catch_TXN_Code"],df1[,"Calendar_Year"]),sum)
+  dimnames(df2)[[2]]<-c("Gear","Taxon","Year","Tonnes")
+  
+# Summarise main catches by taxon
+     # 1. first aggregate by taxon, year
+     # 2. exclude taxa with annual catches not exceeding Threshold
+     # 3. summarise as taxon, total catch over the fishery  
+
+  df3<-aggregate(df2[,"Tonnes"],by=list(df2[,"Taxon"],df2[,"Year"]),sum)
+  dimnames(df3)[[2]]<-c("Taxon","Year","Tonnes")
+  df3<-df3[df3[,"Tonnes"]>Threshold,]
+  df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
+  dimnames(df4)[[2]]<-c("Taxon","Tonnes")
+  
+  df5<-data.frame(TaxaGroup = BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"],Tonnes = df4[,"Tonnes"])
+  df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
+  dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
+  df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
+  df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"]),"Taxon_Name"]
+
+#cat("Catch summary for Gear Type: ",CRfishingGear[match(GT_Names[match(g,GT_Names[,"GTn"]),"Gear"],CRfishingGear[,"GTY_Code"]),"GTY_Name"],"\n\n",sep="")   
+ print.data.frame(df7[,c(3,2)])
+cat("\n",sep="")   
+ 
+  } # end fishery_catch_summary
+
+summaryFisheryCatches<-bind_rows(lapply(GT_Names[,1],fnGearType_catch_summary,CSBdata,BFTaxa,GT_Names))
+
+
+
+
+
+fnCatch_summary<-function(fLevel,dCSB,f,BFTaxa,Threshold){
+
+     fn<-length(f)
+     rInclude<-apply(dCSB[,f],1,function(f,fn,fLevel){res<-f %in% fLevel;if      (sum(res)<fn) return(FALSE) else return(TRUE)},fn,fLevel)
+
+     df1<-dCSB[rInclude,c("Calendar_Year","Catch_TXN_Code","Green_Weight")]
+     ByList<-lapply(c("Calendar_Year","Catch_TXN_Code"),function(f,df){return     (df[,f])},df1)
+
+     df2<-aggregate(df1[,"Green_Weight"],by=ByList,sum)
+       dimnames(df2)[[2]]<-c("Year","Taxon","Tonnes")
+  
+       df3<-df2[df2[,"Tonnes"]>Threshold,]
+       if(nrow(df3)>0){
+       df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
+       dimnames(df4)[[2]]<-c("Taxon","Tonnes")
+  
+       df5<-data.frame(TaxaGroup =
+               BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"]
+              ,Tonnes = df4[,"Tonnes"])
+       df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
+       dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
+       df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
+       df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"])
+                            ,"Taxon_Name"]
+
+       } else df7<-NULL # end if nrow(df3)>0
+
+     cat("Catch summary for factors (",paste(f,collapse=", "),") with combined levels: ",paste(fLevel,collapse=", "),"\n\n",sep="")   
+  
+      if (!is.null(df7)) print.data.frame(df7[,c(3,2)]) else 
+                print("Catches lower than threshold")
+      cat("\n",sep="") 
+
+     } # end catch_summary
+
+
+# code to check assignment to bottom or midwater fisheries (for bottom fishing effort)
+
+Factors<-c("GTY_Code","Flag_CTY_Code","TFN")
+LevelCombinations<-unique(CSBdata[,Factors])
+apply(LevelCombinations,1,fnCatch_summary,CSBdata,Factors,BFTaxa,Threshold=10)
+
+
+
+
+```
+
+  
+# check catches by species
+  
+cat("Total catch of individual tax (where a catch in one year by a nation of the taxon :",sep="")
+     
+  df<-aggregate(df2[,"Tonnes"],by=list(df2[,"Nation"]),sum)
+  dimnames(df)[[2]]<-c("Nation","Tonnes")
+
+  
+# determine first and last years
+  
+  TrawlGfish_CTY<-df[,"Nation"]
+  YearFirst<-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){min(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
+  YearLast <-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){max(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
+df<-cbind(df,YearFirst,YearLast)
+
+```
+
+# add zeros for each Nation*Decade 
+
+decade<-seq(1960,2010,10)
+CTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,CT){return(data.frame(Decade=rep(decade[t],length(CT))
+                                                                                              ,Country=CT
+                                                                                              ,Tonnes=rep(0,length(CT))
+                                                                                              ))},decade,CT_Names[,"CTn"]))
+
+res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
+                ,Gear=GT_Names[match(CSBdata[,"GTY_Code"],GT_Names[,"Gear"]),"GTn"]
+                ,Tonnes = CSBdata[,"Green_Weight"])
+res1<-rbind(res1,GTzeros)
+res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"]),sum))
+dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
+
+
+
+
+  
+  
+  p <- ggplot(df, aes(x = factor(df[,"Nation"]), y = df[,"Tonnes"], fill = factor(df[,"Country"])))
+  p <- p + geom_col(position = "dodge")
+  p <- p + labs(x = "Gear", y ="Tonnes", fill = "Country",title=paste(CatchTaxon[ct]," catch by gear for countries",sep=""))
+  p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
+  p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+#  p <- p + scale_fill_discrete(name = "Gear type", breaks=levels(factor(res[,"Gear"])),labels = CRfishingGear[CRfishingGear[,"GTY_Code"]  %in%  levels(factor(res[,"Gear"])),"GTY_Name"]) # change legend labels
+  p
+  
+ plots<- c(plots,list(p))
+ 
+} # end ct
+
+```
+
+
+
+
+
+The aim is to use combinations of gear, country, and taxa to isolate bottom fishing from pelagic fishing
+
+
+ggplot(dat, 
+       aes(Order, Value)) +
+  geom_col(aes(fill = ID),
+           position = position_dodge2(width = 0.5, preserve = "single")) +
+  facet_grid(. ~ Day) +
+  scale_x_continuous(
+    breaks = dat$Order,
+    labels = dat$ID)
+    
+
+
