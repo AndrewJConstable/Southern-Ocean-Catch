@@ -25,6 +25,133 @@ WorkDir<-('C:\\_w\\_d\\Catch\\')
             # The code here strips away the testing routines.
 #
 
+#############################################################
+# data files needed to support analyses
+
+ASD_depth_propInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_propInMEASOareas.rds")
+
+# files from CCAMLR Statistical Bulletin 2019
+
+CSBdata           <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryCatch.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CEdata            <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryEffort.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRcountry         <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataCountry.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRfishingActivity <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingActivity.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRfishingGear     <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingGear.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRgeographicArea  <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataGeographicArea_to_MEASO.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataVesselSize.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+
+# files with results from assignment of records to location of fishing gears - bottom (B) or midwater (M)
+resultsDir<-"C:/_w/_r/Southern-Ocean-Catch/"
+data_Location_B_M_Step_1<-read.csv2(paste(resultsDir,'B-M Step1.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+data_Location_B_M_Step_2<-read.csv2(paste(resultsDir,'B-M Step2.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+
+#############################################################
+# input data to support analyses
+
+TF_Names<-data.frame(TFn     = c(           1,        2,          3,           4,           5,      6,      7,      8)
+                    ,Fishery = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
+                    ,Colour  = c("darkslategray","grey80","bisque3","lightsteelblue1","thistle3","coral2","cadetblue4","salmon4"))
+
+GT_Names<-data.frame(GTn      = c(   1,    2,    3,    4,   5,   6,    7,    8,   9,   10,  11)
+                    ,Gear     = c("TX", "OT","OTB","TBB","OTM","TMB","TM","LLS","FPO","JIG","SX")
+                    ,Location = c( "B",  "U",  "B",  "B",  "M",  "M", "M",  "B",  "B",  "M", "M")  # midwater = "M", bottom = "B"
+                    ,Colour   = c("grey5","grey20","grey35","grey50","darkslategray4","darkslategray3","darkslategray2","coral3","coral1","orchid3","firebrick"))
+
+CT_Names<-data.frame(
+          CTn      = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26)
+         ,CTY_Code = c("ARG", "AUS", "BGR", "CHL", "CHN", "FRA", "DDR", "DEU", "IND", "JPN", "KOR", "LVA", "NAM"
+                      ,"NOR", "NZL", "PAN", "POL", "RUS", "SUN", "UKR", "ZAF", "ESP", "GBR", "USA", "URY", "VUT")
+         ,Colour   = c("grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
+                      , "grey25", "grey60")
+) # end dataframe
+
+
+# details for reporting catch composition - BFTaxa
+
+tCode          <- c("TOP","TOA","GRV","MCC","SRX","RAJ","ANT","WGR","GR2","RFA","GR1","ANI","NOS","BYR","LIC","SRR","NOR"
+                    ,"ANS","GHP","NOG","NOT","NOX","ICX","KIF","SGI","SSI","WIC","KRI","LXX","MZZ","TRL","ELC","SQA","SPX","SQS","KCF","KCV")
+Catch_Group   <- c(4,5,6,6,7,7,8,6,6,7,6,3,10,7,9,7,1
+                   ,12,2,2,2,2,9,9,9,9,9,13,14,16,15,14,17,18,17,11,11)
+
+BT_name                     <- c("Notothenia rossii"
+                             ,"Other Groundfish"
+                             ,"Mackerel Icefish"
+                             ,"Dissostichus eleginoides"
+                             ,"Dissostichus mawsoni"
+                             ,"Grenadiers"
+                             ,"Skates & rays"
+                             ,"Antimora spp."
+                             ,"Other icefish"
+                             ,"Lepidonotothen squamifrons"
+                             ,"Crabs"
+                             ,"Silverfish"
+                             ,"Krill"
+                             ,"Myctophids"
+                             ,"Trematomus spp."
+                             ,"Unknown fish"
+                             ,"Squid"
+                             ,"Salps")
+
+BFTaxa <- data.frame(Code = tCode,Catch_Group) 
+Taxon_Name<-BT_name[match(BFTaxa[,"Catch_Group"],c(1:length(BT_name)))]
+BFTaxa<-cbind(BFTaxa,Taxon_Name)
+
+
+########################################################################
+# General utility functions
+
+
+fnCatch_summary<-function(fLevel,dCSB,f,BFTaxa,Threshold){
+
+     fn<-length(f)
+     rInclude<-apply(dCSB[,f],1,function(f,fn,fLevel){res<-f %in% fLevel;if      (sum(res)<fn) return(FALSE) else return(TRUE)},fn,fLevel)
+
+     df1<-dCSB[rInclude,c("Calendar_Year","Catch_TXN_Code","Green_Weight")]
+     ByList<-lapply(c("Calendar_Year","Catch_TXN_Code"),function(f,df){return     (df[,f])},df1)
+
+     df2<-aggregate(df1[,"Green_Weight"],by=ByList,sum)
+       dimnames(df2)[[2]]<-c("Year","Taxon","Tonnes")
+  
+       df3<-df2[df2[,"Tonnes"]>Threshold,]
+       if(nrow(df3)>0){
+       df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
+       dimnames(df4)[[2]]<-c("Taxon","Tonnes")
+  
+       df5<-data.frame(TaxaGroup =
+               BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"]
+              ,Tonnes = df4[,"Tonnes"])
+       df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
+       dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
+       df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
+       df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"])
+                            ,"Taxon_Name"]
+
+       } else df7<-NULL # end if nrow(df3)>0
+
+     cat("Catch summary for factors (",paste(f,collapse=", "),") with combined levels: ",paste(fLevel,collapse=", "),"\n\n",sep="")   
+  
+      if (!is.null(df7)) print.data.frame(df7[,c(3,2)]) else 
+                print("Catches lower than threshold")
+      cat("\n",sep="") 
+
+     } # end catch_summary
+
+
+
 ```
 
 # Introduction  
@@ -68,7 +195,7 @@ Where ASD areas overlap MEASO areas, the proportional distribution of depth stra
 
 ```{r ASD_MEASO_compare, echo=FALSE}
 
-ASD_depth_propInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_propInMEASOareas.rds")
+# use data from file read into ASD_depth_propInMEASOareas
 
 Depth_intervals<-unique(ASD_depth_propInMEASOareas[,"Depth"])
 
@@ -89,12 +216,6 @@ df<-cbind(df,Depth[match(df[,2],Depth[,1]),2])
 dimnames(df)[[2]][18]<-"DepthRange"
 
 
-for (a in seq(1,length(SplitASD),1)){
-cat("\nASD area: ",SplitASD[a],"\n\n",sep="")
-print.data.frame(df[df[,1]==SplitASD[a],c(18,3:17)],2,row.names = FALSE)
- }
-  
-
 ```
 
 
@@ -110,32 +231,200 @@ In Subarea 48.3, the shelf area is wholly contained within the Subantarctic Zone
 
 Some catch and effort data are only allocated to statistical reporting areas without haul geolocations.  Those data were approximately allocated to MEASO areas according to a straight forward set of rules based on the target fishery from which the data came.  
 
+#### Area 48  
+
+
+*Subarea 48.1*  
+
+Subarea 48.1 is split between the Atlantic sector and the East Pacific sector at the eastern tip of Joinville Island with a line crossing the Drake Passage.  The Atlantic sector includes the eastern margin of the Antarctic Peninsula and the shelf to the east of Joinville Island and around Elephant Island.  Bransfield Strait, the western margin of the Antarctic Peninsula and the South Shetland Islands are included in the East Pacific Sector.  The Atlantic sector within the subarea is wholly within the Antarctic zone.  The component of the subarea in the East Pacific Sector has parts in the Antarctic and Subantarctic Zones.  
+
+Bottom trawl fishing around Joinville Island is included in the East Pacific.  Bottom trawling around Elephant Island is included in the Atlantic.  
   
-## CCAMLR Statistical Bulletin  
-  
-The CCAMLR Statistical Bulletin 2019 comprised separate catch and effort files, along with files containing data on each of the factors.  The following provides the first few lines of each loaded file.  
-  
-```{r CSB-Data-Load, echo=FALSE}
-CSBdata           <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryCatch.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CEdata            <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryEffort.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CRcountry         <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataCountry.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CRfishingActivity <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingActivity.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CRfishingGear     <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingGear.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CRgeographicArea  <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataGeographicArea_to_MEASO.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataVesselSize.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
-CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv',sep="")
-                              , header = TRUE, sep = ",", dec = ".")
+```{r,echo=FALSE}
+a<-"48.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+
 ```
 
-### Factor and variable descriptions
+*Subarea 48.2*  
 
+Subarea 48.2 is in the Atlantic sector with its northern margin crossing into the Subantarctic Zone.  All the fishing areas in this subarea are in the Antarctic zone.  
+  
+```{r,echo=FALSE}
+a<-"48.2"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+
+*Subarea 48.3*  
+  
+Subarea 48.3 is in the Atlantic sector with the Southern ACC Front extending from the east of the area to the north and west before returning to the east.  The island, shelf and bank areas sit primarily in the Subantarctic Zone.   
+
+Fishing for bentho-pelagic finfish has occurred primarily in shelf areas.  Myctophid fishing has occurred in the north of the subarea near Morris Ewing Bank.  Krill fishing occurs primarily on the northern shelf slope.  
+
+All fisheries occur in the Subantarctic Zone.  Occasionally, krill fishing has occurred in the Antarctic Zone (CCAMLR Secretariat, 2020).
+
+
+```{r,echo=FALSE}
+a<-"48.3"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+
+*Subarea 48.4*  
+  
+Subarea 48.4 is in the Atlantic sector.  The islands and shelf areas are within the Antarctic Zone, while the northern area is in the Subantarctic Zone.  
+  
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"48.4"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+*Subarea 48.5*  
+  
+Subarea 48.5 is in the Atlantic sector and wholly within the Antarctic Zone.  
+  
+  
+*Subarea 48.6*  
+  
+Subarea 48.6 is in the Atlantic sector.  The island and shelf areas in the northern part of this subarea are primarily within the Antarctic Zone, although some deeper water areas below 1000 m lie in the Subantarctic Zone.    
+  
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"48.6"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+#### Area 58   
+
+Catches in Area 58 have been reported as coming from the whole area, from subareas, and from the divisions within subareas.
+
+*Subarea 58.4*  
+
+Subarea 58.4 is split between the Central Indian Sector and the East Indian Sector.  It also crosses the Antarctic and Subantarctic Zones.  Krill fishing is contained within the Antarctic Zone.  Finfishing has occurred in both zones.
+
+
+**Division 58.4.1**  
+  
+Division 58.4.1 crosses between the Central Indian Sector and the East Indian Sector at 115oE, and is mostly in the Antarctic Zone.  The northern part of this division is in deep water in the Subantarctic Zone.
+
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"58.4.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+
+**Division 58.4.2**  
+  
+Division 58.4.2 falls within the Central Indian Sector and the Antarctic Zone.  A small deep water area in the north east of this division is in the Subantarctic Zone.
+
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"58.4.2"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+
+
+**Division 58.4.3a**
+  
+Division 58.4.3a is in the Central Indian Sector and falls almost entirely in the Subantarctic Zone.
+  
+```{r,echo=FALSE}
+a<-"58.4.3a"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+**Division 58.4.3b**  
+  
+Division 58.4.3b is in the Central Indian Sector and falls mostly in the Subantarctic Zone.  The deeper eastern margin of BANZARE Bank is in the Antarctic Zone.  
+  
+Finfish fisheries occur in the Subantarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"58.4.3b"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+**Division 58.4.4a**  
+
+Division 58.4.4a is in the Central Indian Sector.  It is split between the Antarctic Zone where krill fishing occurs and the Subantarctic Zone where finfishing has occurred on the Ob seamount.  
+  
+```{r,echo=FALSE}
+a<-"58.4.4a"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+**Division 58.4.4b**  
+  
+Division 58.4.4b is in the Central Indian Sector.  It is split between the Antarctic Zone where krill fishing occurs and the Subantarctic Zone where finfishing has occurred on the Lena and other seamounts.  
+  
+```{r,echo=FALSE}
+a<-"58.4.4b"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+*Subarea 58.5*  
+
+Subarea 58.5 contains two divisions (58.5.1, 58.5.2) and is in the Central Indian Sector, falling mostly in the Subantarctic Zone.  The deep water northeast corner of Division 58.5.1 sits in the Northern Zone.  
+  
+All fisheries occur within the Subantarctic Zone.  
+  
+**Division 58.5.1**
+  
+```{r,echo=FALSE}
+a<-"58.5.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+*Subarea 58.6*  
+   
+Subarea 58.6 is in the Central Indian Sector, falling mostly in the Subantarctic Zone.  The northwest corner over Delcano Rise is in the Northern Zone.
+  
+
+```{r,echo=FALSE}
+a<-"58.6"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+*Subarea 58.7*  
+  
+Subarea 58.7 is in the Central Indian Sector.  It is split between the Subantarctic Zone and the Northern Zone.  Most shallow water area is around the islands and shelf area in the Northern Zone. 
+  
+Fisheries occur in the Northern Zone.  
+  
+```{r,echo=FALSE}
+a<-"58.7"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+#### Area 88
+  
+Early fishing interest in Area 88 was in the western margins around the Balleny Islands.
+
+*Subarea 88.1*  
+  
+Subarea 88.1 crosses between the East Indian Sector and the West Pacific Sector at Cape Adare, and is mostly in the Antarctic Zone.  The northern part of this subarea is in deep water in the Subantarctic Zone.  
+  
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"88.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+
+*Subarea 88.2*  
+  
+Subarea 88.2 crosses between the West Pacific Sector and the East Pacific Sector at 125oW, and is mostly in the Antarctic Zone.  The northeast part of this subarea in the East Pacific Sector is in deep water in the Subantarctic Zone.  
+  
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"88.2"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+*Subarea 88.3*  
+  
+Subarea 88.3 is in the East Pacific Sector.  It is split between the Antarctic and Subantarctic Zones with shallow areas occurring almost entirely in the Antarctic Zone.
+
+All fisheries occur in the Antarctic Zone.  
+  
+```{r,echo=FALSE}
+a<-"88.3"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
+```
+  
+    
+## CCAMLR Statistical Bulletin  
+  
+The CCAMLR Statistical Bulletin 2019 contains catch and effort records for fisheries up to the 2017-2018 split year. It comprised separate catch and effort files, along with files containing data on each of the factors.    
+    
 Each of the variables in the CCAMLR Statistical Bulletin (CSB) tables are described here along with a printout of the levels in each.
 
 **AFC_ID**  Unique identifier for AGGREGATED FISHERY CATCH (system generated)[this identifier is in catch table but not included in the effort table]  
@@ -175,14 +464,39 @@ Each of the variables in the CCAMLR Statistical Bulletin (CSB) tables are descri
 **Pot_Count**  Total number of pots set. Applies to pot fishing only.[only in effort table]  
   
   
-### Approach to summarising fisheries  
-
-#### Target Fisheries
+Additional factors added to each record from the Bulletin:  
   
-Records are assigned in the database to fisheries according to target species.  These are further grouped to differentiate earlier bottom trawl groundfish fisheries, which principally targetted *Notothenia rossii* and other notothenids, from the other fisheries.  The groundfish fisheries had various assignments of target species and are grouped here.  The assignment to target fishery groups are:
+**Split_Year**  FAO reporting, 1 July to 30 June, with year identified for June.  
+  
+**CC_Season**  CCAMLR Season, 1 December to 30 November, with year identified for November.  
+  
+```{r ,echo=FALSE}
+# CSBdata is the main data frame with catch records
 
+CC_Season<-CSBdata[,"Calendar_Year"]
+NextYear<-!is.na(CSBdata[,"Month"]) & CSBdata[,"Month"]>11
+CC_Season[NextYear]<-CC_Season[NextYear]+1
+Split_Year<-CSBdata[,"Calendar_Year"]
+NextYear<-!is.na(CSBdata[,"Month"]) & CSBdata[,"Month"]>6
+Split_Year[NextYear]<-Split_Year[NextYear]+1
+CSBdata<-cbind(CSBdata,CC_Season,Split_Year)
 
-```{r target-fisheries, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) in each major fishery in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
+```
+  
+### Summary of fisheries  
+  
+#### Target Fisheries  
+  
+Records are assigned in the database to fisheries according to target species.  These are further grouped to differentiate earlier bottom trawl groundfish fisheries, which principally targetted *Notothenia rossii* and other notothenids, from the other fisheries.  The groundfish fisheries had various assignments of target species and are grouped here as a 'groundfish' fishery.  
+
+A new factor was added to the main data frame with details in a reference data frame:
+
+**TFN**  Fishery number assigned to the record, as per the legend sequence in Figure 1.
+
+Records were checked for their assignment to target fisheries based on the dominant species caught over the course of one year in that fishery, aggregated according to nominated gear types.  Records having patterns of aggregated catches that did not match the general pattern of dominant species caught were reassigned to other fisheries for which the pattern was more similar.  This only occurred for catches in the groundfish, mackerel icefish and krill fisheries in the 1970s prior to CCAMLR.
+
+  
+```{r target-fisheries, out.width="70%", fig.cap="*Figure 1: Total catch (tonnes, all taxa) in each major fishery in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
 TargetFishery<-CSB_taxa[unique(match(CSBdata[,"Target_TXN_Code"],CSB_taxa[,"TXN_Code"])),]
 TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     7,     1,     6,     5,      1,    2,     1 
                                             ,    5,     1,     4,     8,     1,     2)
@@ -191,9 +505,6 @@ TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     7,     1,     6,     5
   )
 TF_Plot_Order<-TF_Plot_Order[order(TF_Plot_Order[,"TFn"]),]
 
-TF_Names<-data.frame(TFn     = c(           1,        2,          3,           4,           5,      6,      7,      8)
-                    ,Fishery = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
-                    ,Colour  = c("darkslategray","grey80","bisque3","lightsteelblue1","thistle3","coral2","cadetblue4","salmon4"))
 
 # create vector to be added to CSBdata for the Target fishery for each record
 
@@ -238,23 +549,13 @@ p
 
 ```
   
-The identification of target species on the submission forms seemed very poor in the early years with obvious mis-assignments.  **These were not used in the final analysis**.  Instead, the gear code was used to determine the type of fishery.
-
 #### Gear Type  
   
-Gear types in the CCAMLR Statistical Bulletin have been specifically identified as bottom and midwater trawls, hooks and lines, pots and traps, squid jigging and seines.  Fisheries prior to and during the first decade of CCAMLR were primarily trawls using the otter board method.  While these became regularly differentiated between bottom  and midwater trawling since that time, those early years had a large proportion of trawling not assigned to these categories (Otter Trawl nei).  Those unassigned otter trawls have been combined with bottom trawls because of the preponderance of groundfish fishing undertaken in those early years.  
+Gear types in the CCAMLR Statistical Bulletin have been specifically identified as bottom and midwater trawls, hooks and lines, pots and traps, squid jigging and seines.    
   
   
 ```{r GearType, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) for each major gear type in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
 #addmargins(xtabs(Green_Weight ~ Calendar_Year + GTY_Code, CSBdata))
-
-GT_Names<-data.frame(GTn      = c(   1,    2,    3,    4,   5,   6,    7,    8,   9,   10,  11)
-                    ,Gear     = c("TX","OT","OTB","TBB","OTM","TMB","TM","LLS","FPO","JIG","SX")
-                    ,Threshold = c(50 ,  50,   50,   50,   50,   50,  50,   30,   10,   50,  50)
-                    ,Colour   = c("grey5","grey20","grey35","grey50","darkslategray4","darkslategray3","darkslategray2","coral3","coral1","orchid3","firebrick"))
-
-
-
 
 
 # add zeros for each Fishery*Decade 
@@ -273,10 +574,9 @@ res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"])
 dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
 
 # exclude data
-res<-res[res[,"Gear"]!=1,]
-GT_Names<-GT_Names[GT_Names[,"GTn"]!=1,]
-res<-res[res[,"Gear"]!=4,]
-GT_Names<-GT_Names[GT_Names[,"GTn"]!=4,]
+GTY_exclude<- GT_Names[match(c("TX","TBB"),GT_Names[,"Gear"]),"GTn"]     
+res<-res[!(res[,"Gear"] %in% GTY_exclude),]
+pGT_Names<- GT_Names[-(match(GTY_exclude,GT_Names[,"GTn"])),] 
 
 plotYlog<-TRUE
 
@@ -293,35 +593,160 @@ p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Decade"]), y = res[,"Tonnes
 p <- p + labs(x = "Decade", y ="Tonnes", fill = "Gear",title="Total catch by decade for gear type")
 if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
 p <- p + scale_fill_discrete(name = "Gear", breaks=levels(factor(res[,"Gear"]))
-                             ,labels = CRfishingGear[match(GT_Names[
-                                            match(as.character(GT_Names[,"GTn"]),levels(factor(res[,"Gear"])))
+                             ,labels = CRfishingGear[match(pGT_Names[
+                                            match(as.character(pGT_Names[,"GTn"]),levels(factor(res[,"Gear"])))
                                             ,"Gear"],CRfishingGear[,"GTY_Code"]),"GTY_Name"]
-                             ,type=GT_Names[,"Colour"]) # change legend labels
+                             ,type=pGT_Names[,"Colour"]) # change legend labels
+
+p
+
+
+```
+
+  
+Fisheries in the 1970s and 1980s were undertaken primarily using otter trawls.  While these trawls became regularly differentiated between bottom and midwater trawling since that time, those early years had a large proportion of trawling not differentiated (i.e. Otter Trawl nei).  As they comprise a large component of the early fisheries, an assessment of the potential historical effects of fishing on the ecosystem needs to assign these trawls to either bottom or midwater fishing.  A two step process was used to assign Otter Trawls Nei to either of the categories.
+
+**Step 1**: Catches for individual taxa were aggregated using three factors - gear type, flag country, fishery.  They were initially aggregated with an additional factor, year, in order to exclude records for taxa with an annual catch less than 30 tonnes.  The data for taxa were then  aggregated across years within the combinations of the three main factors.  The pattern of relative abundance of taxa within the target fisheries and with gear type were used to check whether assignment to pelagic (midwater) or bottom fishing were likely to be correct.  For example, midwater fishing typically yielded large quantities of krill, myctophids and/or silverfish, the latter two rarely being seen in bottom trawls.  As a result of this checking, no trawls already assigned to midwater or bottom were changed.  For the unassigned otter trawls, the myctophid target fishery was assigned to midwater trawling.  The remainder were asigned to bottom trawling, except for the Groundfish and Krill target fisheries of the Soviet Union, which did not have clear catch patterns relating to either midwater or bottom fisheries (groundfish and krill were represented in equal measure).  These were further analysed in Step 2.  
+  
+  
+```{r,echo=FALSE}
+# visual inspection of aggregation according to th
+
+# code to check assignment of location of fishing gear - bottom or midwater fisheries
+CheckBottomFishAssignments<-FALSE
+if(CheckBottomFishAssignments){
+  Factors<-c("GTY_Code","Flag_CTY_Code","TFN")
+  LevelCombinations<-unique(CSBdata[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,CSBdata,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+# add location following inspection and creating a CSV file with relevant assignment from first step: data_Location_B_M_Step_1
+
+dfTmp1<-merge(CSBdata,data_Location_B_M_Step_1,by=c("GTY_Code","Flag_CTY_Code","TFN"))
+
+```
+  
+**Step 2**:  The Soviet Union data for unassigned otter trawls were examined by the combination of three factors - target fishery (only groundfish and krill were represented), CCAMLR catch reporting areas, and year.  For the groundfish fishery, some combinations were dominated by krill with comparatively few groundfish represented.  These were assigned to midwater trawling, with the remainder assigned to bottom fishing.
+  
+```{r,echo=FALSE}
+# check OT,SUN,TFN=c(1,6) in more detail as still uncertain
+
+CheckSUN_OTassignments<-FALSE
+if(CheckSUN_OTassignments){
+  dfSUN<-CSBdata[CSBdata[,"GTY_Code"]=="OT" 
+              & CSBdata[,"Flag_CTY_Code"]=="SUN"
+              & CSBdata[,"TFN"] %in% c(1,6),]
+  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
+  LevelCombinations<-unique(dfSUN[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfSUN,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+# modify location following inspection of SUN data for OT and creating a CSV file with relevant assignment from second step: data_Location_B_M_Step_2
+
+dfTmp2<-merge(dfTmp1,data_Location_B_M_Step_2,by=c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year"),all.x=TRUE)
+dfTmp2[dfTmp2[,"Location.x"]=="U","Location.x"]<-dfTmp2[dfTmp2[,"Location.x"]=="U","Location.y"]
+dimnames(dfTmp2)[[2]][dimnames(dfTmp2)[[2]]=="Location.x"]<-"Location"
+CSBdata<-dfTmp2[,-which(dimnames(dfTmp2)[[2]] %in% "Location.y")]
+GTY_rev<-CSBdata[,"GTY_Code"]
+GTY_rev[GTY_rev=="OT"]<-unlist(lapply(CSBdata[GTY_rev=="OT","Location"],function(g){paste("OT",g,sep="")}))
+CSBdata<-cbind(CSBdata,GTY_rev)
+
+# plot revised assignments
+
+res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
+                ,Gear=GT_Names[match(CSBdata[,"GTY_rev"],GT_Names[,"Gear"]),"GTn"]
+                ,Tonnes = CSBdata[,"Green_Weight"])
+res1<-rbind(res1,GTzeros)
+res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"]),sum))
+dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
+
+# exclude data
+GTY_exclude<- GT_Names[match(c("TX","TBB","OT"),GT_Names[,"Gear"]),"GTn"]     
+res<-res[!(res[,"Gear"] %in% GTY_exclude),]
+pGT_Names<- GT_Names[-(match(GTY_exclude,GT_Names[,"GTn"])),] 
+
+plotYlog<-TRUE
+
+if(plotYlog){
+  res[res[,"Tonnes"]<1,"Tonnes"]<-1
+   }
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Decade"]), y = res[,"Tonnes"], fill = factor(res[,"Gear"]))),position = position_dodge(preserve = 'single'))
+p <- p + labs(x = "Decade", y ="Tonnes", fill = "Gear",title="Total catch by decade for gear type with assigned OT")
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
+p <- p + scale_fill_discrete(name = "Gear", breaks=levels(factor(res[,"Gear"]))
+                             ,labels = CRfishingGear[match(pGT_Names[
+                                            match(as.character(pGT_Names[,"GTn"]),levels(factor(res[,"Gear"])))
+                                            ,"Gear"],CRfishingGear[,"GTY_Code"]),"GTY_Name"]
+                             ,type=pGT_Names[,"Colour"]) # change legend labels
 
 p
 
 ```
+  
+
+A revised GTY code is added to the main data frame along with an assignment of all fisheries to a location in the water column in which the gear was deployed:
+
+**GTY_rev**    Revised GTY_Code to replace OT code
+**Location**   Gear deployed on or near to the bottom (B) or midwater (M).
 
 
-#### Summary by fishery
 
-Method: Data for a fishery is extracted from the Bulletin data and catches summed with the following factors: Year, Nation, Taxon. For each fishery, summaries are provided on:
+  
+#### Nations
 
+**Bentho-pelagic fisheries**  
+  
+  
+**Pelagic fisheries**  
+  
 
-```{r Nations, echo=FALSE}
+#### MEASO-CCAMLR reporting areas  
 
+```{r,echo=FALSE}
+# examine data reported for Areas as a whole
 
-CT_Names<-data.frame(
-          CTn      = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26)
-         ,CTY_Code = c("ARG", "AUS", "BGR", "CHL", "CHN", "FRA", "DDR", "DEU", "IND", "JPN", "KOR", "LVA", "NAM"
-                      ,"NOR", "NZL", "PAN", "POL", "RUS", "SUN", "UKR", "ZAF", "ESP", "GBR", "USA", "URY", "VUT")
-         ,Colour   = c("grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
-                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
-                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
-                      ,"grey25", "grey60", "grey25", "grey60", "grey25", "grey60"
-                      , "grey25", "grey60")
-) # end dataframe
+CheckStatAreaAssignments<-FALSE
+if(CheckStatAreaAssignments){
+dfArea<-CSBdata[CSBdata[,"GAR_Code"] %in% c("48","58","88"),]
+  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
+  LevelCombinations<-unique(dfWholeStatArea[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfWholeStatArea,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+Check58assignments<-FALSE
+if(Check58assignments){
+dfWholeStatArea<-CSBdata[CSBdata[,"GAR_Code"] %in% c("584","585"),]
+  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
+  LevelCombinations<-unique(dfWholeStatArea[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfWholeStatArea,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+CheckGeneralAssignments<-FALSE
+if(CheckGeneralAssignments){
+  Factors<-c("Split_Year","Flag_CTY_Code","GTY_Code","TFN","GAR_Code")
+  LevelCombinations<-unique(CSBdata[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,CSBdata,Factors,BFTaxa,Threshold=10)
+  } # end if
+  
+
 ```
+
+
+### The effects of fishing on the ecosystem
+
+Method: Data for a fishery is extracted from the Bulletin and catches summed with the following factors: Year, Nation, Taxon. For each fishery, summaries are provided on:
+
 
 
 *Groundfish*
@@ -329,154 +754,11 @@ CT_Names<-data.frame(
 
 ```{r Fishery_Groundfish, echo=FALSE}
 
-Threshold <- matrix(c(seq(1,8,1),50,50,30,50,50,50,50,10),ncol=2,byrow=FALSE)
-dimnames(Threshold)[[2]]<-c("Fishery","Threshold")
-
 # taxonomic groups for reporting given catch thresholds
 
-tCode          <- c("TOP","TOA","GRV","MCC","SRX","RAJ","ANT","WGR","GR2","RFA","GR1","ANI","NOS","BYR","LIC","SRR","NOR"
-                    ,"ANS","GHP","NOG","NOT","NOX","ICX","KIF","SGI","SSI","WIC","KRI","LXX","MZZ","TRL","ELC","SQA","SPX","SQS","KCF","KCV")
-Catch_Group   <- c(4,5,6,6,7,7,8,6,6,7,6,3,10,7,9,7,1
-                   ,12,2,2,2,2,9,9,9,9,9,13,14,16,15,14,17,18,17,11,11)
 
-BT_name                     <- c("Notothenia rossii"
-                             ,"Other Groundfish"
-                             ,"Mackerel Icefish"
-                             ,"Dissostichus eleginoides"
-                             ,"Dissostichus mawsoni"
-                             ,"Grenadiers"
-                             ,"Skates & rays"
-                             ,"Antimora spp."
-                             ,"Other icefish"
-                             ,"Lepidonotothen squamifrons"
-                             ,"Crabs"
-                             ,"Silverfish"
-                             ,"Krill"
-                             ,"Myctophids"
-                             ,"Trematomus spp."
-                             ,"Unknown fish"
-                             ,"Squid"
-                             ,"Salps")
 
-BFTaxa <- data.frame(Code = tCode,Catch_Group) 
-Taxon_Name<-BT_name[match(BFTaxa[,"Catch_Group"],c(1:length(BT_name)))]
-BFTaxa<-cbind(BFTaxa,Taxon_Name)
-
-fnFishery_catch_summary<-function(f,dCSB,BFTaxa,Threshold,Fisheries){
-
-df1<-dCSB[dCSB[,"TFN"] %in% f,c("Flag_CTY_Code","Calendar_Year","Catch_TXN_Code","Green_Weight")]
-
-df2<-aggregate(df1[,"Green_Weight"],by=list(df1[,"Flag_CTY_Code"],df1[,"Catch_TXN_Code"],df1[,"Calendar_Year"]),sum)
-  dimnames(df2)[[2]]<-c("Nation","Taxon","Year","Tonnes")
   
-# Summarise main catches by taxon
-     # 1. first aggregate by taxon, year
-     # 2. exclude taxa with annual catches not exceeding Threshold
-     # 3. summarise as taxon, total catch over the fishery  
-
-  df3<-aggregate(df2[,"Tonnes"],by=list(df2[,"Taxon"],df2[,"Year"]),sum)
-  dimnames(df3)[[2]]<-c("Taxon","Year","Tonnes")
-  df3<-df3[df3[,"Tonnes"]>Threshold[f,2],]
-  df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
-  dimnames(df4)[[2]]<-c("Taxon","Tonnes")
-  
-  df5<-data.frame(TaxaGroup = BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"],Tonnes = df4[,"Tonnes"])
-  df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
-  dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
-  df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
-  df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"]),"Taxon_Name"]
- 
-cat("Catch summary for fishery: ",Fisheries[f,"Fishery"],"\n\n",sep="")   
- print.data.frame(df7[,c(3,2)])
-cat("\n",sep="")   
- 
-  } # end fishery_catch_summary
-
-summaryFisheryCatches<-bind_rows(lapply(c(1:8),fnFishery_catch_summary,CSBdata,BFTaxa,Threshold,TF_Names))
-
-
-fnGearType_catch_summary<-function(g,dCSB,BFTaxa,NamesList){
-
-
-df1<-dCSB[dCSB[,"GTY_Code"] %in% GT_Names[match(g, GT_Names[,"GTn"]),"Gear"],c("GTY_Code","Calendar_Year","Catch_TXN_Code","Green_Weight")]
-
-df2<-aggregate(df1[,"Green_Weight"],by=list(df1[,"GTY_Code"],df1[,"Catch_TXN_Code"],df1[,"Calendar_Year"]),sum)
-  dimnames(df2)[[2]]<-c("Gear","Taxon","Year","Tonnes")
-  
-# Summarise main catches by taxon
-     # 1. first aggregate by taxon, year
-     # 2. exclude taxa with annual catches not exceeding Threshold
-     # 3. summarise as taxon, total catch over the fishery  
-
-  df3<-aggregate(df2[,"Tonnes"],by=list(df2[,"Taxon"],df2[,"Year"]),sum)
-  dimnames(df3)[[2]]<-c("Taxon","Year","Tonnes")
-  df3<-df3[df3[,"Tonnes"]>Threshold,]
-  df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
-  dimnames(df4)[[2]]<-c("Taxon","Tonnes")
-  
-  df5<-data.frame(TaxaGroup = BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"],Tonnes = df4[,"Tonnes"])
-  df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
-  dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
-  df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
-  df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"]),"Taxon_Name"]
-
-#cat("Catch summary for Gear Type: ",CRfishingGear[match(GT_Names[match(g,GT_Names[,"GTn"]),"Gear"],CRfishingGear[,"GTY_Code"]),"GTY_Name"],"\n\n",sep="")   
- print.data.frame(df7[,c(3,2)])
-cat("\n",sep="")   
- 
-  } # end fishery_catch_summary
-
-summaryFisheryCatches<-bind_rows(lapply(GT_Names[,1],fnGearType_catch_summary,CSBdata,BFTaxa,GT_Names))
-
-
-
-
-
-fnCatch_summary<-function(fLevel,dCSB,f,BFTaxa,Threshold){
-
-     fn<-length(f)
-     rInclude<-apply(dCSB[,f],1,function(f,fn,fLevel){res<-f %in% fLevel;if      (sum(res)<fn) return(FALSE) else return(TRUE)},fn,fLevel)
-
-     df1<-dCSB[rInclude,c("Calendar_Year","Catch_TXN_Code","Green_Weight")]
-     ByList<-lapply(c("Calendar_Year","Catch_TXN_Code"),function(f,df){return     (df[,f])},df1)
-
-     df2<-aggregate(df1[,"Green_Weight"],by=ByList,sum)
-       dimnames(df2)[[2]]<-c("Year","Taxon","Tonnes")
-  
-       df3<-df2[df2[,"Tonnes"]>Threshold,]
-       if(nrow(df3)>0){
-       df4<-aggregate(df3[,"Tonnes"],by=list(df3[,"Taxon"]),sum)
-       dimnames(df4)[[2]]<-c("Taxon","Tonnes")
-  
-       df5<-data.frame(TaxaGroup =
-               BFTaxa[match(df4[,"Taxon"],BFTaxa[,"Code"]),"Catch_Group"]
-              ,Tonnes = df4[,"Tonnes"])
-       df6<-aggregate(df5[,"Tonnes"],list(df5[,"TaxaGroup"]),sum)  
-       dimnames(df6)[[2]]<-c("TaxaGroup","Tonnes")  
-       df7<-df6[order(df6[,"Tonnes"], decreasing=TRUE),]
-       df7[,"Taxon"]<-BFTaxa[match(df7[,"TaxaGroup"],BFTaxa[,"Catch_Group"])
-                            ,"Taxon_Name"]
-
-       } else df7<-NULL # end if nrow(df3)>0
-
-     cat("Catch summary for factors (",paste(f,collapse=", "),") with combined levels: ",paste(fLevel,collapse=", "),"\n\n",sep="")   
-  
-      if (!is.null(df7)) print.data.frame(df7[,c(3,2)]) else 
-                print("Catches lower than threshold")
-      cat("\n",sep="") 
-
-     } # end catch_summary
-
-
-# code to check assignment to bottom or midwater fisheries (for bottom fishing effort)
-
-Factors<-c("GTY_Code","Flag_CTY_Code","TFN")
-LevelCombinations<-unique(CSBdata[,Factors])
-apply(LevelCombinations,1,fnCatch_summary,CSBdata,Factors,BFTaxa,Threshold=10)
-
-
-
-
 ```
 
   
