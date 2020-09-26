@@ -24,134 +24,23 @@ library(dplyr)
             # The code here strips away the testing routines.
 #
 
-```
+##############################################
+# Input details for processing
 
-# Introduction 
-  
-The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@ref(fig:CCAMLR-MEASO-areas).  
-  
-  
-```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show='hold', fig.align='center', echo=FALSE}
-knitr::include_graphics(c(paste(WorkDir,"CCAMLR_areas.png",sep=""),paste(WorkDir,"MEASO_areas.png",sep="")))
-```
-  
-    
-  
-```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
-knitr::include_graphics(paste(WorkDir,"MEASO-CCAMLR_combined_areas.png",sep=""))
-```
+SaveRdata_proportions<-FALSE
+FileRdata_proportions<-"ASD_depth_propInMEASOareas.rds"
 
+SaveRdata_areas<-FALSE
+FileRdata_areas<-"ASD_depth_AreaInMEASOareas.rds"
 
+Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
+CompareWithCCAMLR<-FALSE
 
-```{r echo=FALSE}
-Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\gebco_cells_2000m.rds"
-Seabed_areas <- readRDS(Seabed_file)
-cat("File with Seabed area data: ",Seabed_file,"\n",sep="")
-cat("Variable names in seabed area file:",names(Seabed_areas),"\n",sep="  ")
+Depth_intervals<-data.frame("DepthRange" = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
+                           ,"Minimum"    = c(-100,-100, -600,-100,  -300,  -600,  -600,-100)
+                           ,"Maximum"    = c(-600,-700,-1800,-700,-10000,-10000,-10000,-800)
+                            )# end data frame
 
-# give each cell an area of 2x2 km until it is available in input file
-Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
-
-# rename variables to be consistent with code - check order is correct
-
-names(Seabed_areas)<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","Area")
-cat("Variable names in seabed area file:",names(Seabed_areas),"\n",sep="  ")
-
-
-Cbed<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]),c("Lon","Lat","Depth","MEASO","ASD","Area")]
-
-# make NA for CCAMLR or MEASO areas into "Outside"
-Cbed[is.na(Cbed[,"ASD"]),"ASD"]<-"Outside"
-Cbed[is.na(Cbed[,"MEASO"]),"MEASO"]<-"Outside"
-
-ASD<-sort(unique(Cbed[,"ASD"]))
-MEASOarea<-sort(unique(Cbed[,"MEASO"]))
-
-
-
-
-# CCAMLR seabed areas are in km2
-
-# 0-600 m depth
-m0_600<-c(219745, 37431, 46435, 2254, 526672, 50766, 367887, 210302, 0, 399, 10374, 144396, 58399, 17534, 5414, 342091, 267789, 302111)
-
-# 600-1800 m depth
-m600_1800<-c(84150, 73651, 67656, 25691, 150069, 89261, 177191, 98452, 20051, 129167, 23164, 130830, 118238, 43102, 30975, 243829, 118972, 115677)
-
-# deeper than 1800 m depth
-m1800plus<-c(318526, 745076, 915246, 916662, 1416504, 6134892, 4021956, 1189462, 485484, 550334, 2462471, 806884, 466281, 608828, 549379, 2111495, 4350752, 1766153)
- 
-# total seabed area
-mTotal<-c(622421, 856158, 1029337, 944607, 2093245, 6274919, 4567034, 1498216, 505535, 679900, 2496009, 1082110, 642918, 669464, 585768, 2697415, 4737513, 2183941)
-
-CSB_Cbed_nm<-data.frame(ASD[ASD!="Outside"],m0_600,m600_1800,m1800plus,mTotal)
-
-
-Depth_intervals<-c(0,-300, -600, -900, -1200, -1800,-10000)
-
-
-fnDepthArea<-function(dInt          # which depth interval
-                     ,Depth_ints   # vector of depth intervals
-                     ,Cb_dat         # dataframe with "Depth", "Area" 
-                                   #  optional for none, one or both of "MEASO", "ASD"
-                     ){
-# find grouping variables (if any)
-  Groups<-dimnames(Cb_dat)[[2]] 
-  Groups<-Groups[which(Groups %in% c("MEASO","ASD"))]
-# subset data from depth range
-    x<- Cb_dat[(Cb_dat[,"Depth"] <   Depth_ints[dInt] & 
-                Cb_dat[,"Depth"] >=  Depth_ints[(dInt+1)]),]
-
-  if(length(Groups)>0) {
-           GroupBy<-lapply(Groups,function(grp,x1){return(x1[,grp])},x)
-           res <- aggregate(x[,"Area"],GroupBy,sum)
-         
-           names(res)<-c(Groups,"Area")
-            res<-cbind(res[,Groups],rep(Depth_ints[dInt],nrow(res)),res[,"Area"])
-           names(res)<-c(Groups,"Depth","Area")
-           return(res)
-       } else {
-           sumx<-matrix(c(Depth_ints[dInt], sum(x[,"Area"])),nrow=1)
-           dimnames(sumx)[[2]]<-c("Depth","Area")
-           return(sumx) 
-       } # end else
-     } # end fnDepthArea
-
-
-
-Result<-do.call(rbind,lapply(seq(1:(length(Depth_intervals)-1)),fnDepthArea,Depth_intervals,Cbed))
-
-
-# now check against CCAMLR seabed areas
-
-Result[Result[,"Depth"]>(-600),"CCAMLRstrata"]<-1
-Result[Result[,"Depth"]>(-1800) & Result[,"Depth"]<=(-600),"CCAMLRstrata"]<-2
-
-res<-aggregate(Result[,"Area"],list(Result[,"ASD"],Result[,"CCAMLRstrata"]),sum)
-names(res)<-c("ASD","CCAMLRstrata","Area")
-
-ResMergeDepths<-merge(res[res[,"CCAMLRstrata"]==1,c("ASD","Area")],res[res[,"CCAMLRstrata"]==2,c("ASD","Area")],by="ASD",all=TRUE)
-ResMergeDepths[is.na(ResMergeDepths)]<-0
-ResMergeDepths<-ResMergeDepths[ResMergeDepths[,"ASD"]!="Outside",]
-
-names(ResMergeDepths)<-c("ASD","e0_600","e600_1800")
-
-x<-CSB_Cbed_nm[,c("m0_600","m600_1800")]
-y<-ResMergeDepths[,c("e0_600","e600_1800")]
-
-Cbed_compare<-cbind(ResMergeDepths[,"ASD"]
-                  ,round((x-y)/x,2)
-                  ) # end cbind
-  
-cat("Compare depth zone 0-600m (CCAMLR-etopo2")
-print(Cbed_compare)
-
-# save areas
-
-```
-
-```{r echo=FALSE}
-# MEASO Areas from main document
 MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
                     ,"AOS","Atlantic Ocean","Subantarctic","48"
                     ,"AON","Atlantic Ocean","Northern","48"
@@ -170,16 +59,160 @@ MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
                     ,"Outside","not in MEASO area","",""),byrow=TRUE,ncol=4)
 dimnames(MEASOareas)[[2]]<-c("Code","Sector","Zone","CSB_Stat_Area")
 
+DoCatchDistributionRules<-TRUE
+
+##############################################
+# General Functions
+
+fnDepthArea<-function(dInt          # which depth interval
+                     ,dfDepths      # data frame of depth intervals  
+                     ,Cb_dat        # dataframe with "Depth", "Area" 
+                                   #  optional for none, one or both of "MEASO", "ASD"
+                     ){
+# find grouping variables (if any)
+  Groups<-dimnames(Cb_dat)[[2]] 
+  Groups<-Groups[which(Groups %in% c("MEASO","ASD"))]
+# subset data from depth range
+    x<- Cb_dat[(Cb_dat[,"Depth"] <   dfDepths[dInt,"Minimum"] & 
+                Cb_dat[,"Depth"] >=  dfDepths[dInt,"Maximum"]),]
+  if(length(Groups)>0) {
+           GroupBy<-lapply(Groups,function(grp,x1){return(x1[,grp])},x)
+           res <- aggregate(x[,"Area"],GroupBy,sum)
+         
+           names(res)<-c(Groups,"Area")
+            res<-data.frame(res[,Groups],rep(dfDepths[dInt,"DepthRange"],nrow(res)),res[,"Area"])
+           dimnames(res)[[2]]<-c(Groups,"DepthRange","Area")
+           return(res)
+       } else {
+           sumx<-data.frame(DepthRange = dfDepths[dInt,"DepthRange"], Area = sum(x[,"Area"]))
+           return(sumx) 
+       } # end else
+     } # end fnDepthArea
+
+
+
+```
+
+# Introduction 
+  
+The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@ref(fig:CCAMLR-MEASO-areas).  
+  
+  
+```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show='hold', fig.align='center', echo=FALSE}
+knitr::include_graphics(c("CCAMLR_areas.png","MEASO_areas.png"))
+```
+  
+    
+  
+```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
+knitr::include_graphics("MEASO-CCAMLR_combined_areas.png")
+```
+
+
+
+```{r inputGEBCO, echo=FALSE}
+
+Seabed_areas <- readRDS(Seabed_file)
+cat("File with Seabed area data: ",Seabed_file,"\n",sep="")
+cat("Variable names in seabed area file:",names(Seabed_areas),"\n",sep="  ")
+
+# give each cell an area of 2x2 km until it is available in input file
+Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
+
+# rename variables to be consistent with code - check order is correct
+
+dimnames(Seabed_areas)[[2]]<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","SSRU","SSMU","Area")
+cat("Variable names in seabed area file:",names(Seabed_areas),"\n",sep="  ")
+
+
+Cbed<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]),c("Lon","Lat","Depth","MEASO","ASD","Area")]
+
+# make NA for CCAMLR or MEASO areas into "Outside"
+Cbed[is.na(Cbed[,"ASD"]),"ASD"]<-"Outside"
+Cbed[is.na(Cbed[,"MEASO"]),"MEASO"]<-"Outside"
+
+ASD<-sort(unique(Cbed[,"ASD"]))
+MEASOarea<-sort(unique(Cbed[,"MEASO"]))
+```
+
+
+```{r compareCSB, echo=FALSE}
+# 
+
+if(CompareWithCCAMLR){
+
+cat("Compare GEBCO summaries with CCAMLR Statistical Bulletin seabed areas (km2)\n\n",sep="")
+
+  
+# 0-600 m depth
+m0_600<-c(219745, 37431, 46435, 2254, 526672, 50766, 367887, 210302, 0, 399, 10374, 144396, 58399, 17534, 5414, 342091, 267789, 302111)
+
+# 600-1800 m depth
+m600_1800<-c(84150, 73651, 67656, 25691, 150069, 89261, 177191, 98452, 20051, 129167, 23164, 130830, 118238, 43102, 30975, 243829, 118972, 115677)
+
+# deeper than 1800 m depth
+m1800plus<-c(318526, 745076, 915246, 916662, 1416504, 6134892, 4021956, 1189462, 485484, 550334, 2462471, 806884, 466281, 608828, 549379, 2111495, 4350752, 1766153)
+ 
+# total seabed area
+mTotal<-c(622421, 856158, 1029337, 944607, 2093245, 6274919, 4567034, 1498216, 505535, 679900, 2496009, 1082110, 642918, 669464, 585768, 2697415, 4737513, 2183941)
+
+CSB_Cbed_data<-data.frame(ASD[ASD!="Outside"],m0_600,m600_1800,m1800plus,mTotal)
+
+
+GEBCOdepths <-   data.frame("DepthRange" = c("0-600m","600-1800m","deeper 1800m")
+                           ,"Minimum"    = c(   0, -600, -1800)
+                           ,"Maximum"    = c(-600,-1800,-10000)
+                            )# end data frame
+
+
+Result<-do.call(rbind,lapply(seq(1,nrow(GEBCOdepths),1),fnDepthArea,GEBCOdepths,Cbed))
+
+
+# now check against CCAMLR seabed areas
+
+Result[Result[,"Depth"]>(-600),"CCAMLRstrata"]<-1
+Result[Result[,"Depth"]>(-1800) & Result[,"Depth"]<=(-600),"CCAMLRstrata"]<-2
+
+res<-aggregate(Result[,"Area"],list(Result[,"ASD"],Result[,"CCAMLRstrata"]),sum)
+names(res)<-c("ASD","CCAMLRstrata","Area")
+
+ResMergeDepths<-merge(res[res[,"CCAMLRstrata"]==1,c("ASD","Area")],res[res[,"CCAMLRstrata"]==2,c("ASD","Area")],by="ASD",all=TRUE)
+ResMergeDepths[is.na(ResMergeDepths)]<-0
+ResMergeDepths<-ResMergeDepths[ResMergeDepths[,"ASD"]!="Outside",]
+
+names(ResMergeDepths)<-c("ASD","e0_600","e600_1800")
+
+x<-CSB_Cbed_data[,c("m0_600","m600_1800")]
+y<-ResMergeDepths[,c("e0_600","e600_1800")]
+
+Cbed_compare<-cbind(ResMergeDepths[,"ASD"]
+                  ,round((x-y)/x,2)
+                  ) # end cbind
+dimnames(Cbed_compare)[[2]]<-c("ASD","0-600m","600-1800m")
+  
+cat("Compare depth zone 0-600m (CCAMLR-GEBCO)/CCAMLR\n\n",sep="")
+print.data.frame(Cbed_compare)
+
+} # end comparison with CCAMLR data
+
+```
+
+```{r SeabedSummary, echo=FALSE}
+
+Result<-do.call(rbind,lapply(seq(1,nrow(Depth_intervals),1),fnDepthArea,Depth_intervals,Cbed))
+
+ASD_depth_AreaInMEASOareas<-Result
+
 
 # create matrix of proportions of a depth stratum in a subarea (columns) to be allocated to MEASO areas (rows)
 
 # generate list of (ASD,depth_stratum) vectors
-ASD_depth_categories<-unique(Result[,c("ASD","Depth")])
+ASD_depth_categories<-unique(Result[,c("ASD","DepthRange")])
 
 fnPropInMarea<-function(i,ASD_depth,cbed_areas,M_areas){
      res<-rep(0,length(M_areas))
      x<-cbed_areas[cbed_areas[,"ASD"]  ==ASD_depth[i,"ASD"] & 
-                   cbed_areas[,"Depth"]==ASD_depth[i,"Depth"], c("MEASO","Area")]
+                   cbed_areas[,"DepthRange"]==ASD_depth[i,"DepthRange"], c("MEASO","Area")]
      x[,"prop"]<-x[,"Area"]/sum(x[,"Area"])
      res[match(x[,"MEASO"],M_areas)]<-round(x[,"prop"],3)
      return(cbind(data.frame(ASD_depth[i,]),data.frame(matrix(res,ncol=16))))
@@ -187,19 +220,278 @@ fnPropInMarea<-function(i,ASD_depth,cbed_areas,M_areas){
 
 # for each ASD,depthStratum combination, determine proportions across MEASO areas
 ASD_depth_propInMEASOareas<-bind_rows(lapply(c(1:nrow(ASD_depth_categories)),fnPropInMarea,ASD_depth_categories,Result,MEASOareas[,"Code"]))
-dimnames(ASD_depth_propInMEASOareas)[[2]]<- c("ASD","Depth",MEASOareas[,"Code"])
+dimnames(ASD_depth_propInMEASOareas)[[2]]<- c("ASD","DepthRange",MEASOareas[,"Code"])
 
-for (d in seq(1,length(Depth_intervals),1)){
-DepthRange <- if(d<length(Depth_intervals)) paste(Depth_intervals[d]," : ",Depth_intervals[(d+1)]," m",sep="") else
-                                            paste("deeper than ",Depth_intervals[d]," m",sep = "")
-cat("\nDepth interval: ",DepthRange,"\n\n",sep="")
-print(ASD_depth_propInMEASOareas[ASD_depth_propInMEASOareas[,2]==Depth_intervals[d],c(1,3:18)])
+for (d in seq(1,nrow(Depth_intervals),1)){
+cat("\nDepth interval: ",Depth_intervals[d,"DepthRange"],". ",Depth_intervals[d,"Minimum"]," m to ",Depth_intervals[d,"Maximum"]," m. \n\n",sep="")
+print.data.frame(ASD_depth_propInMEASOareas[ASD_depth_propInMEASOareas[,"DepthRange"]==Depth_intervals[d,"DepthRange"],c(1,3:18)])
  }
 
 
-saveRDS(ASD_depth_propInMEASOareas,file="ASD_depth_propInMEASOareas.rds")
+if (SaveRdata_proportions) saveRDS(ASD_depth_propInMEASOareas,file=FileRdata_proportions)
+if (SaveRdata_areas) saveRDS(ASD_depth_AreaInMEASOareas,file=FileRdata_areas)
 
 
 ```
 
+# Distributing catches based on Seabed Areas in Specific Cases
+
+
+
+```{r CatchDistSetup, echo=FALSE}
+CatchDistRules<-NULL
+
+Cbed_rules<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]) & !is.na(Seabed_areas[,"ASD"]) & !is.na(Seabed_areas[,"MEASO"]),c("Lon","Lat","Depth","MEASO","ASD","SSMU","SSRU","Area")]
+Cbed_rules[is.na(Cbed_rules[,"SSRU"]),"SSRU"]<-"NA"
+Cbed_rules[is.na(Cbed_rules[,"SSMU"]),"SSMU"]<-"NA"
+
+ASD<-sort(unique(Cbed_rules[,"ASD"]))
+ASD<-ASD[ASD!="NA"]
+SSMU<-sort(unique(Cbed_rules[,"SSMU"]))
+SSMU<-SSMU[SSMU!="NA"]
+SSRU<-sort(unique(Cbed_rules[,"SSRU"]))
+SSRU<-SSRU[SSRU!="NA"]
+MEASOarea<-sort(unique(Cbed_rules[,"MEASO"]))
+
+fnPropInMareaForRule<-function(cbed_a,M_areas,FixedProp=FALSE){   # if FixedProp then the areas in cbed_a are proportions
+     res<-rep(0,length(M_areas))
+     if(FixedProp) x<-cbed_a[,"Area"] else x<-cbed_a[,"Area"]/sum(cbed_a[,"Area"])
+     res[match(cbed_a[,"MEASO"],M_areas)]<-round(x,3)
+     names(res)<-M_areas
+     return(res)
+     } # end fnPropInMarea
+
+
+```
+
+## Bottom fishing
+
+### Area 48
+
+Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
+  
+In Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
+  
+In Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding to two SSMUs - South Orkney West and South Orkney North East.  
+  
+In Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
+
+
+```{r CD_Bottom_Area48, echo=FALSE}
+
+RuleName        <- "B01"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 48-trawl-SUN-all of Area 48"
+RuleFactorLevels <- list(GTY_rev = "OTB", Flag_CTY_Code="SUN",GAR_Code = 48)
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+              (     (    Cbed_rules[,"SSMU"]=="APBSE" 
+                       & Cbed_rules[,"Lon"]>-56 
+                       & Cbed_rules[,"Lon"]>-63.3)
+                  | (    Cbed_rules[,"SSMU"]=="APE"   
+                       & Cbed_rules[,"Lon"]>-56
+                       & Cbed_rules[,"Lon"]>-63.3) 
+               ) 
+              |  Cbed_rules[,"SSMU"]=="APDPW" 
+              |  Cbed_rules[,"SSMU"]=="APDPE" 
+              |  Cbed_rules[,"SSMU"]=="APEI"   )
+      |   (Cbed_rules[,"ASD"]=="48.2" & 
+               ( Cbed_rules[,"SSMU"]=="SOW" 
+              |  Cbed_rules[,"SSMU"]=="SONE"))| 
+           Cbed_rules[,"ASD"]=="48.3"
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B02"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 48.1-trawl-spread around finfishing grounds according to Kock, 1992."
+RuleFactorLevels <- list(GTY_rev = "OTB",GAR_Code = 481)
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+                  ( (Cbed_rules[,"SSMU"]=="APBSE" & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lon"]>-63.3) |
+                    (Cbed_rules[,"SSMU"]=="APE"   & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lon"]>-63.3) ) | 
+                  Cbed_rules[,"SSMU"]=="APDPW" | 
+                  Cbed_rules[,"SSMU"]=="APDPE" | 
+                  Cbed_rules[,"SSMU"]=="APEI"   )
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B03"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 48.1-longline-Chile - likely to be around Elephpant Island."
+RuleFactorLevels <- list(GTY_rev = "LLS",Flag_CTY_Code = "CHL",GAR_Code = 481)
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+                  Cbed_rules[,"SSMU"]=="APEI"   )
+          ,]
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B04"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 58-trawl-SUN-finfish-concentrated in subantarctic areas. No record of 58.7"
+RuleFactorLevels <- list(GTY_rev = "OTB",GAR_Code = 58)
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B05"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58-trawl-SUN-subantarctci finfish (inspected data) but with Antarctic krill in 1978 & 1979"
+RuleFactorLevels <- list(GTY_rev = "OTB",Flag_CTY_Code = "SUN",GAR_Code = 58)
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIS"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                        ,Krill = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B06"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Division 58.4.1-longline-check catch limits and reports one year later"
+RuleFactorLevels <- list(GTY_rev = "LLS",GAR_Code = 5841)
+
+dfR <- Cbed_rules[
+          (  Cbed_rules[,"ASD"]=="58.4.1" 
+ #          & Cbed_rules[,"SSRU"]=="APEI"     # add SSRUs later ########################
+           )
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B07"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58.4.1-longline-NZ- work close to Ross Sea"
+RuleFactorLevels <- list(GTY_rev = "LLS",Flag_CTY_Code = "NZL",GAR_Code = 5841)
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("EIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B08"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58.4.1-trawl-Aus- south of BANZARE Bank"
+RuleFactorLevels <- list(GTY_rev = "OTB",Flag_CTY_Code = "AUS",GAR_Code = 5841)
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+```
+
+
+B09   Area 88         - trawl    - POL - check catch is not pelagic.  apply M02
+B10   Subarea 88.1    - longline - check haul data, also check catch limits according to SSRUs/research blocks (remove 88.1A from WPA and place in EIA)
+B11   Subarea 88.1    - trawl    - NZ - likely a research voyage in Ross Sea.
+B12   Subarea 88.2    - longline - check haul data, also check catch limits separating east and west SSRUs (and reports in following year on what was caught in each)
+B13   Subarea 88.3    - longline - Korea - check in haul data, also check catch limits according to SSRUs/research blocks - is there anything in subantarctic.
+
+
+
+M01   Area 48         - trawl - SUN/LVA - spread around finfishing grounds of Area 48.
+M02   Subarea 48.1    - krill - by SSMU areas around islands - not including the east AP or the western SSMUs.
+
+M03   Area 58         - trawl - SUN - early years were in subantarctic
+M04   Subarea 58.4    - krill - Korea - are these likely to be predominantly from CIA
+M05   Subarea 58.4    - krill - SUN - are these likely from Prydz Bay
+M06   Division 58.4.1 - krill - relative areas based on depth range - 1000 - 3000 m - check Steve Nicol's descriptions
+M07   Division 58.4.1 - krill - Japan - in EIA as activities in East of division.
+M08   Division 58.4.1 - krill - Japan - in CIA as activities in west of division.
+
+M09   Area 88         - trawl - mix of krill and silverfish
+M10   Subarea 88.1    - krill - how much was in WPA versus around Balleny Islands in EIA
+M11   Subarea 88.2    - krill - was most fishing in WPA
 

@@ -3,12 +3,17 @@ title: "MEASO fishery statistics"
 author: "Andrew Constable"
 date: "16/09/2020"
 output: 
-  html_document:
+  bookdown::html_document2:
     toc: true
     toc_depth: 4
+    fig_caption: yes
+bibliography: 'C:\\_w\\_r\\Southern-Ocean-Catch\\CatchRefs.bibtex'   
+
 ---
 
 ```{r setup, include=FALSE}
+
+
 knitr::opts_chunk$set(echo = TRUE)
 
 library(ggplot2)
@@ -25,10 +30,11 @@ WorkDir<-('C:\\_w\\_d\\Catch\\')
             # The code here strips away the testing routines.
 #
 
-#############################################################
-# data files needed to support analyses
+############# data files needed to support analyses #######################
 
 ASD_depth_propInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_propInMEASOareas.rds")
+ASD_depth_AreaInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_AreaInMEASOareas.rds")
+
 
 # files from CCAMLR Statistical Bulletin 2019
 
@@ -56,8 +62,8 @@ data_Location_B_M_Step_1<-read.csv2(paste(resultsDir,'B-M Step1.csv',sep="")
 data_Location_B_M_Step_2<-read.csv2(paste(resultsDir,'B-M Step2.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
 
-#############################################################
-# input data to support analyses
+################# input data to support analyses #################
+
 
 TF_Names<-data.frame(TFn     = c(           1,        2,          3,           4,           5,      6,      7,      8)
                     ,Fishery = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
@@ -110,10 +116,10 @@ BFTaxa <- data.frame(Code = tCode,Catch_Group)
 Taxon_Name<-BT_name[match(BFTaxa[,"Catch_Group"],c(1:length(BT_name)))]
 BFTaxa<-cbind(BFTaxa,Taxon_Name)
 
+decade<-seq(1960,2010,10)
 
-########################################################################
-# General utility functions
 
+################# General utility functions #####################
 
 fnCatch_summary<-function(fLevel,dCSB,f,BFTaxa,Threshold){
 
@@ -160,268 +166,20 @@ MEASO has a number of chapters that refer to, or detail, the nature and scale of
    
 # Finfish and krill fisheries   
   
-CCAMLR provides the main source of information on finfish and krill fisheries (www.ccamlr.org), although other sources are useful for clarifying the locations and scale of catches prior to the establishment of CCAMLR in 1980 (e.g. Duhamel Kerguelen) and for the scale of incidental mortality of Southern Ocean seabirds in longline fisheries in the Southern Hemisphere (www.acap.aq).  
+CCAMLR provides the main source of information on finfish and krill fisheries through various reports & publications (www.ccamlr.org), although other sources are useful for clarifying the locations and scale of catches prior to the establishment of CCAMLR in 1980 [e.g. @RN49] and for the scale of incidental mortality of Southern Ocean seabirds in longline fisheries in the Southern Hemisphere (www.acap.aq).  
   
-Here I use catch and effort data available in the CCAMLR Statistical Bulletin (https://www.ccamlr.org/en/publications/statistical-bulletin) as the primary source of data (hereafter referred to as CSB data). After securing permission from data owners, the CCAMLR Secretariat extracted catch and effort data that could be assigned to MEASO areas, which were data submitted for each haul (hereafter referred to as Haul Data). As the latter data required geolocation of catches, these data were not inclusive of all data in the Statistical Bulletin.   
-  
-The reason for the discrepancy is that early data were not required to be submitted with haul information and, instead, were simply summaries of catch and effort by CCAMLR reporting areas - Statistical Areas, Subareas or Divisions (herafter ASD areas). The scale of aggregation of submitted data varied between reporting nation.  Even since the requirement for reporting by haul, there remains discrepancies between the aggregated Bulletin Data and aggregated Haul Data.  
-  
-The attributes of the Bulletin and Haul datasets are described in Section 2.1, along with the discrepancies between them.  
-  
-Sections 2.2 and 2.3 detail the two methods used to partition the CSB data into MEASO Areas:  
-- for finfish: proportion of fishable sea bed area (trawl and longline respectively) in CCAMLR ASD areas that fall within different MEASO areas, and
-- for krill: the approximate proportion of catch from CCAMLR ASD falling within different MEASO areas derived from fine-scale maps of decadal catch provided by the CCAMLR Secretariat in Kawaguchi & Nicol (2020).  
-  
-   
-## Relationship between CCAMLR and MEASO areas  
-  
-The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@ref(fig:CCAMLR-MEASO-areas).  
-  
-  
-```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show='hold', fig.align='center', echo=FALSE}
-knitr::include_graphics(c(paste(WorkDir,"CCAMLR_areas.png",sep=""),paste(WorkDir,"MEASO_areas.png",sep="")))
-```
-  
-    
-The MEASO areas do not perfectly align with CCAMLR areas (Figure \@ref(fig:CCAMLR-MEASO-overlay)).  
+Here I use catch and effort data available in the CCAMLR Statistical Bulletin (https://www.ccamlr.org/en/publications/statistical-bulletin) as the primary source of data (hereafter referred to as CSB data or Bulletin data). 
 
+After securing permission from data owners, the CCAMLR Secretariat extracted catch and effort data by MEASO areas. These data were originally  submitted as haul data, with geolocation of catches.  However, the dataset as a whole is not inclusive of all data in the Statistical Bulletin.  They are used to help partition the data in the Statistical Bulletin as appropriate. Hereafter, they are referred to as Haul Data.
   
-```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
-knitr::include_graphics(paste(WorkDir,"MEASO-CCAMLR_combined_areas.png",sep=""))
-```
-
-Where ASD areas overlap MEASO areas, the proportional distribution of depth strata relevant for fishing are given in the following table.  Data are rounded to two decimal places.  As a result, some rounding results in showing no overlap (proportion in one MEASO area = 1).
-
-
-```{r ASD_MEASO_compare, echo=FALSE}
-
-# use data from file read into ASD_depth_propInMEASOareas
-
-Depth_intervals<-unique(ASD_depth_propInMEASOareas[,"Depth"])
-
-DepthRange<-NULL
-for (d in seq(1,length(Depth_intervals),1)){
-DepthRange <- if(d<length(Depth_intervals)) c(DepthRange,paste(-Depth_intervals[d],"-",-Depth_intervals[(d+1)]," m",sep="")) else
-                                            c(DepthRange,paste("> ",-Depth_intervals[d]," m",sep = ""))
-}
-Depth<-data.frame(Interval = Depth_intervals,Range = DepthRange)
-
-SplitASD<-apply(ASD_depth_propInMEASOareas[,c(3:16)],1,max)<1
-
-df<-ASD_depth_propInMEASOareas[SplitASD &   # only records that are split across areas, exclude "Outside" rows and columns
-                               ASD_depth_propInMEASOareas[,1]!="Outside",c(1:17)]
-df[,c(3:17)]<-round(df[,c(3:17)],2)
-SplitASD <- unique(df[,1])
-df<-cbind(df,Depth[match(df[,2],Depth[,1]),2])
-dimnames(df)[[2]][18]<-"DepthRange"
-
-
-```
-
-
-### Rules for splitting catch from ASD areas into MEASO areas
-
-The matching of reporting areas and fisheries with MEASO areas had the greatest difficulty in Statistical Subareas 48.1 nd 48.3.  
+The reason for the discrepancy is that early data were not required to be submitted with haul information and, instead, were simply summaries of catch and effort by CCAMLR reporting areas - Statistical Areas, Subareas or Divisions (hereafter referred to ASD areas). The scale of aggregation of submitted data varied between reporting nation.  Even since the requirement for reporting by haul, there remains discrepancies between the aggregated Bulletin Data and aggregated Haul Data.  These discrepancies are reported here.
   
-In Subarea 48.1, the early groundfish fishery occurred around Elephant Island as well as around the islands off the West Antarctic Peninsula.  
-  
-In Subarea 48.3, the shelf area is wholly contained within the Subantarctic Zone, while the northern deep-water area, where krill fishing could occur, is in a retroflection of the Antarctic zone.  
-  
-[placeholder - describe how the division into MEASO areas was done and when the haul by haul took over.  Area 88 data should be correct because it was later]
-
-Some catch and effort data are only allocated to statistical reporting areas without haul geolocations.  Those data were approximately allocated to MEASO areas according to a straight forward set of rules based on the target fishery from which the data came.  
-
-#### Area 48  
-
-
-*Subarea 48.1*  
-
-Subarea 48.1 is split between the Atlantic sector and the East Pacific sector at the eastern tip of Joinville Island with a line crossing the Drake Passage.  The Atlantic sector includes the eastern margin of the Antarctic Peninsula and the shelf to the east of Joinville Island and around Elephant Island.  Bransfield Strait, the western margin of the Antarctic Peninsula and the South Shetland Islands are included in the East Pacific Sector.  The Atlantic sector within the subarea is wholly within the Antarctic zone.  The component of the subarea in the East Pacific Sector has parts in the Antarctic and Subantarctic Zones.  
-
-Bottom trawl fishing around Joinville Island is included in the East Pacific.  Bottom trawling around Elephant Island is included in the Atlantic.  
-  
-```{r,echo=FALSE}
-a<-"48.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-
-```
-
-*Subarea 48.2*  
-
-Subarea 48.2 is in the Atlantic sector with its northern margin crossing into the Subantarctic Zone.  All the fishing areas in this subarea are in the Antarctic zone.  
-  
-```{r,echo=FALSE}
-a<-"48.2"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-
-*Subarea 48.3*  
-  
-Subarea 48.3 is in the Atlantic sector with the Southern ACC Front extending from the east of the area to the north and west before returning to the east.  The island, shelf and bank areas sit primarily in the Subantarctic Zone.   
-
-Fishing for bentho-pelagic finfish has occurred primarily in shelf areas.  Myctophid fishing has occurred in the north of the subarea near Morris Ewing Bank.  Krill fishing occurs primarily on the northern shelf slope.  
-
-All fisheries occur in the Subantarctic Zone.  Occasionally, krill fishing has occurred in the Antarctic Zone (CCAMLR Secretariat, 2020).
-
-
-```{r,echo=FALSE}
-a<-"48.3"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-
-*Subarea 48.4*  
-  
-Subarea 48.4 is in the Atlantic sector.  The islands and shelf areas are within the Antarctic Zone, while the northern area is in the Subantarctic Zone.  
-  
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"48.4"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-*Subarea 48.5*  
-  
-Subarea 48.5 is in the Atlantic sector and wholly within the Antarctic Zone.  
+The attributes of the Bulletin dataset and the relationship between the ASD areas and the MEASO areas are provided in the first subsection.  The second subsection summarises the overall attributes of the fisheries in the CCAMLR area.  The third subsection describes how the Bulletin data were subdivided into MEASO areas.  This section describes the haul dataset and its differences with the Bulletin dataset.  The fourth subsection then summarises the attributes of the fisheries relevant for considering the effects of fishing on Southern Ocean ecosystems.
   
   
-*Subarea 48.6*  
+## Relating data in the CCAMLR Statistical Bulletin to MEASO areas  
   
-Subarea 48.6 is in the Atlantic sector.  The island and shelf areas in the northern part of this subarea are primarily within the Antarctic Zone, although some deeper water areas below 1000 m lie in the Subantarctic Zone.    
-  
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"48.6"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-#### Area 58   
-
-Catches in Area 58 have been reported as coming from the whole area, from subareas, and from the divisions within subareas.
-
-*Subarea 58.4*  
-
-Subarea 58.4 is split between the Central Indian Sector and the East Indian Sector.  It also crosses the Antarctic and Subantarctic Zones.  Krill fishing is contained within the Antarctic Zone.  Finfishing has occurred in both zones.
-
-
-**Division 58.4.1**  
-  
-Division 58.4.1 crosses between the Central Indian Sector and the East Indian Sector at 115oE, and is mostly in the Antarctic Zone.  The northern part of this division is in deep water in the Subantarctic Zone.
-
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"58.4.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-
-**Division 58.4.2**  
-  
-Division 58.4.2 falls within the Central Indian Sector and the Antarctic Zone.  A small deep water area in the north east of this division is in the Subantarctic Zone.
-
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"58.4.2"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-
-
-**Division 58.4.3a**
-  
-Division 58.4.3a is in the Central Indian Sector and falls almost entirely in the Subantarctic Zone.
-  
-```{r,echo=FALSE}
-a<-"58.4.3a"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-**Division 58.4.3b**  
-  
-Division 58.4.3b is in the Central Indian Sector and falls mostly in the Subantarctic Zone.  The deeper eastern margin of BANZARE Bank is in the Antarctic Zone.  
-  
-Finfish fisheries occur in the Subantarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"58.4.3b"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-**Division 58.4.4a**  
-
-Division 58.4.4a is in the Central Indian Sector.  It is split between the Antarctic Zone where krill fishing occurs and the Subantarctic Zone where finfishing has occurred on the Ob seamount.  
-  
-```{r,echo=FALSE}
-a<-"58.4.4a"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-**Division 58.4.4b**  
-  
-Division 58.4.4b is in the Central Indian Sector.  It is split between the Antarctic Zone where krill fishing occurs and the Subantarctic Zone where finfishing has occurred on the Lena and other seamounts.  
-  
-```{r,echo=FALSE}
-a<-"58.4.4b"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-*Subarea 58.5*  
-
-Subarea 58.5 contains two divisions (58.5.1, 58.5.2) and is in the Central Indian Sector, falling mostly in the Subantarctic Zone.  The deep water northeast corner of Division 58.5.1 sits in the Northern Zone.  
-  
-All fisheries occur within the Subantarctic Zone.  
-  
-**Division 58.5.1**
-  
-```{r,echo=FALSE}
-a<-"58.5.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-*Subarea 58.6*  
-   
-Subarea 58.6 is in the Central Indian Sector, falling mostly in the Subantarctic Zone.  The northwest corner over Delcano Rise is in the Northern Zone.
-  
-
-```{r,echo=FALSE}
-a<-"58.6"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-*Subarea 58.7*  
-  
-Subarea 58.7 is in the Central Indian Sector.  It is split between the Subantarctic Zone and the Northern Zone.  Most shallow water area is around the islands and shelf area in the Northern Zone. 
-  
-Fisheries occur in the Northern Zone.  
-  
-```{r,echo=FALSE}
-a<-"58.7"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-#### Area 88
-  
-Early fishing interest in Area 88 was in the western margins around the Balleny Islands.
-
-*Subarea 88.1*  
-  
-Subarea 88.1 crosses between the East Indian Sector and the West Pacific Sector at Cape Adare, and is mostly in the Antarctic Zone.  The northern part of this subarea is in deep water in the Subantarctic Zone.  
-  
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"88.1"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-
-*Subarea 88.2*  
-  
-Subarea 88.2 crosses between the West Pacific Sector and the East Pacific Sector at 125oW, and is mostly in the Antarctic Zone.  The northeast part of this subarea in the East Pacific Sector is in deep water in the Subantarctic Zone.  
-  
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"88.2"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-*Subarea 88.3*  
-  
-Subarea 88.3 is in the East Pacific Sector.  It is split between the Antarctic and Subantarctic Zones with shallow areas occurring almost entirely in the Antarctic Zone.
-
-All fisheries occur in the Antarctic Zone.  
-  
-```{r,echo=FALSE}
-a<-"88.3"; print.data.frame(df[df[,1]==a,c(18,3:17)],2,row.names = FALSE)
-```
-  
-    
-## CCAMLR Statistical Bulletin  
+### CCAMLR Statistical Bulletin  
   
 The CCAMLR Statistical Bulletin 2019 contains catch and effort records for fisheries up to the 2017-2018 split year. It comprised separate catch and effort files, along with files containing data on each of the factors.    
     
@@ -482,29 +240,108 @@ Split_Year[NextYear]<-Split_Year[NextYear]+1
 CSBdata<-cbind(CSBdata,CC_Season,Split_Year)
 
 ```
-  
-### Summary of fisheries  
-  
-#### Target Fisheries  
-  
-Records are assigned in the database to fisheries according to target species.  These are further grouped to differentiate earlier bottom trawl groundfish fisheries, which principally targetted *Notothenia rossii* and other notothenids, from the other fisheries.  The groundfish fisheries had various assignments of target species and are grouped here as a 'groundfish' fishery.  
 
-A new factor was added to the main data frame with details in a reference data frame:
 
-**TFN**  Fishery number assigned to the record, as per the legend sequence in Figure 1.
+### Relationship of CCAMLR areas to MEASO areas  
+  
+The northern limit of the CCAMLR Convention area more or less follows the path of the Polar Front.  The MEASO Subantarctic Zone extends from the Subantarctic Front to the Southern ACC Front, between which lies the Polar Front.  Apart from the Indian Sector, the Northern Zone of the MEASO is not of importance to CCAMLR.  In the Indian Sector, CCAMLR's Subarea 58.7 overlaps with the Norther Zone because that subarea encompasses the Prince Edward and Marion Islands and most of the Delcano Rise.  
+  
+The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@ref(fig:CCAMLR-MEASO-areas).  
+  
+  
+```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show="hold", fig.align='center', echo=FALSE}
+knitr::include_graphics(c("CCAMLR_areas.png","MEASO_areas.png"))
+```
+  
+    
+The MEASO areas do not perfectly align with CCAMLR areas (Figure \@ref(fig:CCAMLR-MEASO-overlay)).  
 
-Records were checked for their assignment to target fisheries based on the dominant species caught over the course of one year in that fishery, aggregated according to nominated gear types.  Records having patterns of aggregated catches that did not match the general pattern of dominant species caught were reassigned to other fisheries for which the pattern was more similar.  This only occurred for catches in the groundfish, mackerel icefish and krill fisheries in the 1970s prior to CCAMLR.
+
+
+```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
+knitr::include_graphics("MEASO-CCAMLR_combined_areas.png")
+```
 
   
-```{r target-fisheries, out.width="70%", fig.cap="*Figure 1: Total catch (tonnes, all taxa) in each major fishery in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
+    
+#### Area 48  
+  
+Area 48 has had the most fishing activity in the CCAMLR area, historically concentrated in Subareas 48.1, 48.2 and 48.3.
+  
+**Subarea 48.1** is split between the Atlantic sector and the East Pacific sector at the eastern tip of Joinville Island with a line crossing the Drake Passage.  The Atlantic sector includes the eastern margin of the Antarctic Peninsula and the shelf to the east of Joinville Island and around Elephant Island.  Bransfield Strait, the western margin of the Antarctic Peninsula and the South Shetland Islands are included in the East Pacific Sector.  The Atlantic sector within the subarea is wholly within the Antarctic zone.  The component of the subarea in the East Pacific Sector has parts in the Antarctic and Subantarctic Zones. Bottom trawl fishing around Joinville Island is included in the East Pacific.  Bottom trawling around Elephant Island is included in the Atlantic.  All fisheries are in the Antarctic Zone.  
+  
+**Subarea 48.2** is in the Atlantic sector with a slim northern margin crossing into the Subantarctic Zone.  All the fishing areas in this subarea are in the Antarctic zone.  
+  
+**Subarea 48.3** is in the Atlantic sector with the Southern ACC Front extending from the east of the area to the north and west before returning to the east.  The island, shelf and bank areas sit predominantly in the Subantarctic Zone.  Fishing for bentho-pelagic finfish has occurred primarily in shelf areas.  Myctophid fishing has occurred in the north of the subarea near Morris Ewing Bank.  Krill fishing occurs primarily on the northern shelf slope. All fisheries occur in the Subantarctic Zone.  Occasionally, krill fishing has been reported to occur in the Antarctic Zone [@RN13712].  
+  
+**Subarea 48.4** is in the Atlantic sector.  The islands and shelf areas are within the Antarctic Zone, while the northern area is in the Subantarctic Zone.  All fisheries occur in the Antarctic Zone.  
+  
+**Subarea 48.5** is in the Atlantic sector and wholly within the Antarctic Zone.  
+  
+**Subarea 48.6** is in the Atlantic sector.  The island and shelf areas in the northern part of this subarea are primarily within the Antarctic Zone, although some deeper water areas below 1000 m lie in the Subantarctic Zone.  All fisheries occur in the Antarctic Zone.  
+  
+    
+#### Area 58   
+  
+Catches in Area 58 have been reported as coming from the whole area, from subareas, and from the divisions within subareas.  
+  
+**Subarea 58.4** is split between the Central Indian Sector and the East Indian Sector.  It also crosses the Antarctic and Subantarctic Zones.  Krill fishing is contained within the Antarctic Zone.  Finfishing has occurred in both zones, although groundfish fisheries prior to longlining primarily occurred in the Subantarctic Zone.  
+  
+*Division 58.4.1* crosses between the Central Indian Sector and the East Indian Sector at 115oE, and is mostly in the Antarctic Zone.  The northern part of this division is in deep water in the Subantarctic Zone.  All fisheries occur in the Antarctic Zone.  
+  
+*Division 58.4.2* falls within the Central Indian Sector and the Antarctic Zone.  A small deep water area in the north east of this division is in the Subantarctic Zone.  All fisheries occur in the Antarctic Zone.  
+  
+*Division 58.4.3a* is in the Central Indian Sector and falls almost entirely in the Subantarctic Zone.  
+  
+*Division 58.4.3b* is in the Central Indian Sector and falls mostly in the Subantarctic Zone. The deeper eastern margin of BANZARE Bank is in the Antarctic Zone. Finfish fisheries occur in the Subantarctic Zone.  
+  
+*Division 58.4.4a* is in the Central Indian Sector.  It is split between the Antarctic Zone where krill fishing occurs and the Subantarctic Zone where finfishing has occurred on the Ob seamount.  
+  
+*Division 58.4.4b* is in the Central Indian Sector.  It is split between the Antarctic Zone where krill fishing occurs and the Subantarctic Zone where finfishing has occurred on the Lena and other seamounts.  
+  
+**Subarea 58.5** contains two divisions (58.5.1, 58.5.2) and is in the Central Indian Sector, falling mostly in the Subantarctic Zone.  The deep water northeast corner of Division 58.5.1 sits in the Northern Zone. All fisheries occur within the Subantarctic Zone.  
+  
+**Subarea 58.6** is in the Central Indian Sector, falling mostly in the Subantarctic Zone.  The northwest corner over Delcano Rise is in the Northern Zone.  
+  
+**Subarea 58.7** is in the Central Indian Sector.  It is split between the Subantarctic Zone and the Northern Zone.  Most shallow water area is around the islands and shelf area in the Northern Zone. Fisheries occur in the Northern Zone.  
+  
+#### Area 88  
+  
+Early fishing interest in Area 88 was in the western margins around the Balleny Islands.  
+  
+**Subarea 88.1** crosses between the East Indian Sector and the West Pacific Sector at Cape Adare, and is mostly in the Antarctic Zone.  The northern part of this subarea is in deep water in the Subantarctic Zone. All fisheries occur in the Antarctic Zone.  
+  
+**Subarea 88.2** crosses between the West Pacific Sector and the East Pacific Sector at 125oW, and is mostly in the Antarctic Zone.  The northeast part of this subarea in the East Pacific Sector is in deep water in the Subantarctic Zone. All fisheries occur in the Antarctic Zone.  
+  
+**Subarea 88.3** is in the East Pacific Sector.  It is split between the Antarctic and Subantarctic Zones with shallow areas occurring almost entirely in the Antarctic Zone. All fisheries occur in the Antarctic Zone.  
+  
+  
+## Summary of fisheries  
+  
+### Target Fisheries  
+  
+The development of Antarctic fisheries began in the 1960s with commercial quantities first being taken in 1969 by the Soviet Union. @RN6645 describes the histories of the fisheries.  He noted that the main target finfish species until publication of his book had been the bentho-pelagic Nototheniids - *Notothenia rossii*, *Lepidonothen squamifrons*, *Patagonotothen guntheri*, *Dissostichus eliginoides* - and the Channicthyds (icefish) - *Champsocephalus gunnari*, *Chaenodraco wilsoni* [which was often misreported as *C. gunnari*, @RN6645] -, and the pelagic myctophids, notably *Electrona carlsbergi*.  The other main target species at that time was Antarctic krill, *Euphausia superba*.  The only additional species to be targetted have been lithodid crabs and *D. mawsoni*.  Some exploratory fishing for the Antarctic silverfish, *PLeurogramma antarcticum*, and squid have been undertaken from time to time but these fisheries never became established.
+
+Records are assigned in the Bulletin database to fisheries according to target species.  Some of the notothenids caught in the early trawl fisheries were grouped.  The different target species are further grouped to simply differentiate between different gears and deployment in the water column.  The groundfish fisheries had various assignments of target species and are grouped here as a 'groundfish' fishery.  The assignments are in the following table: 
+
+```{r TargetGroups, echo=FALSE}
+
 TargetFishery<-CSB_taxa[unique(match(CSBdata[,"Target_TXN_Code"],CSB_taxa[,"TXN_Code"])),]
 TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     7,     1,     6,     5,      1,    2,     1 
                                             ,    5,     1,     4,     8,     1,     2)
-                              ,TXN_Code = c( "TOT", "ANI", "SQS", "MZZ", "KRI", "LXX", "NOX", "ICX", "NOG"
+                         ,TXN_Code = c( "TOT", "ANI", "SQS", "MZZ", "KRI", "LXX", "NOX", "ICX", "NOG"
                                             ,"ELC", "GHP", "ANS", "KCX", "NOS", "WIC")
-  )
+                         ,DepthRange = c("600-1800m", "100-700m", "Pelagic", "-", "Pelagic", "Pelagic", "0-500m", "100-650", "0-500m"
+                                            ,"Pelagic", "150-350m", "0-700m", "200-1500m", "0-600m", "100-650m")
+                          ) # end data frame
 TF_Plot_Order<-TF_Plot_Order[order(TF_Plot_Order[,"TFn"]),]
 
+printTF<-data.frame(Fishery    = TF_Names[match(TF_Plot_Order[,"TFn"],TF_Names[,"TFn"]),"Fishery"]
+                   ,TaxonCode  = TF_Plot_Order[,"TXN_Code"]
+                   ,TaxonName  = CSB_taxa[match(TF_Plot_Order[,"TXN_Code"],CSB_taxa[,"TXN_Code"]),"TXN_Name"]
+                   ,Depth      = TF_Plot_Order[,"DepthRange"]
+                   ) # end df
+print.data.frame(printTF)
 
 # create vector to be added to CSBdata for the Target fishery for each record
 
@@ -512,6 +349,16 @@ Fishery_type<-TF_Plot_Order[match(CSBdata[,"Target_TXN_Code"],TF_Plot_Order[,"TX
 
 CSBdata<-cbind(CSBdata,Fishery_type)
 dimnames(CSBdata)[[2]][length(names(CSBdata))]<-"TFN"
+```
+  
+A new factor was added to the main data frame with details in a reference data frame:
+
+**TFN**  Fishery number assigned to the record, as per the legend sequence in Figure \@ref(fig:TargetFisheries).
+
+Records were checked for their assignment to target fisheries based on the dominant species caught over the course of one year in that fishery, aggregated according to nominated gear types.  Records having patterns of aggregated catches that did not match the general pattern of dominant species caught were reassigned to other fisheries for which the pattern was more similar.  This only occurred for catches in the groundfish, mackerel icefish and krill fisheries in the 1970s prior to CCAMLR.
+
+  
+```{r TargetFisheries, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) in each major fishery in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
 
 # add zeros for each Fishery*Decade 
 
@@ -549,23 +396,26 @@ p
 
 ```
   
-#### Gear Type  
+### Gear Type  
   
 Gear types in the CCAMLR Statistical Bulletin have been specifically identified as bottom and midwater trawls, hooks and lines, pots and traps, squid jigging and seines.    
-  
-  
-```{r GearType, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) for each major gear type in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
-#addmargins(xtabs(Green_Weight ~ Calendar_Year + GTY_Code, CSBdata))
 
+```{r GearTypeSetup, echo=FALSE}
 
+plotGearTypeRaw<-FALSE
+plotGearTypeRev<-TRUE
 # add zeros for each Fishery*Decade 
-
-decade<-seq(1960,2010,10)
 GTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,GT){return(data.frame(Decade=rep(decade[t],length(GT))
                                                                                               ,Gear=GT
                                                                                               ,Tonnes=rep(0,length(GT))
                                                                                               ))},decade,GT_Names[,"GTn"]))
 
+```
+
+  
+```{r plotGearTypeRaw, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) for each major gear type in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
+
+if(plotGearTypeRaw){
 res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
                 ,Gear=GT_Names[match(CSBdata[,"GTY_Code"],GT_Names[,"Gear"]),"GTn"]
                 ,Tonnes = CSBdata[,"Green_Weight"])
@@ -599,27 +449,27 @@ p <- p + scale_fill_discrete(name = "Gear", breaks=levels(factor(res[,"Gear"]))
                              ,type=pGT_Names[,"Colour"]) # change legend labels
 
 p
-
+} # end if plotGearTypeRaw
 
 ```
-
   
 Fisheries in the 1970s and 1980s were undertaken primarily using otter trawls.  While these trawls became regularly differentiated between bottom and midwater trawling since that time, those early years had a large proportion of trawling not differentiated (i.e. Otter Trawl nei).  As they comprise a large component of the early fisheries, an assessment of the potential historical effects of fishing on the ecosystem needs to assign these trawls to either bottom or midwater fishing.  A two step process was used to assign Otter Trawls Nei to either of the categories.
 
 **Step 1**: Catches for individual taxa were aggregated using three factors - gear type, flag country, fishery.  They were initially aggregated with an additional factor, year, in order to exclude records for taxa with an annual catch less than 30 tonnes.  The data for taxa were then  aggregated across years within the combinations of the three main factors.  The pattern of relative abundance of taxa within the target fisheries and with gear type were used to check whether assignment to pelagic (midwater) or bottom fishing were likely to be correct.  For example, midwater fishing typically yielded large quantities of krill, myctophids and/or silverfish, the latter two rarely being seen in bottom trawls.  As a result of this checking, no trawls already assigned to midwater or bottom were changed.  For the unassigned otter trawls, the myctophid target fishery was assigned to midwater trawling.  The remainder were asigned to bottom trawling, except for the Groundfish and Krill target fisheries of the Soviet Union, which did not have clear catch patterns relating to either midwater or bottom fisheries (groundfish and krill were represented in equal measure).  These were further analysed in Step 2.  
   
   
-```{r,echo=FALSE}
+```{r GTstep1,echo=FALSE}
 # visual inspection of aggregation according to th
 
-# code to check assignment of location of fishing gear - bottom or midwater fisheries
-CheckBottomFishAssignments<-FALSE
-if(CheckBottomFishAssignments){
-  Factors<-c("GTY_Code","Flag_CTY_Code","TFN")
-  LevelCombinations<-unique(CSBdata[,Factors])
-  apply(LevelCombinations,1,fnCatch_summary
-        ,CSBdata,Factors,BFTaxa,Threshold=10)
-  } # end if
+# code to check assignment of location of fishing gear - bottom or midwater fisheries - once done, this code can be turned off with logical
+
+                      CheckBottomFishAssignments<-FALSE
+                      if(CheckBottomFishAssignments){
+                        Factors<-c("GTY_Code","Flag_CTY_Code","TFN")
+                        LevelCombinations<-unique(CSBdata[,Factors])
+                        apply(LevelCombinations,1,fnCatch_summary
+                              ,CSBdata,Factors,BFTaxa,Threshold=10)
+                        } # end if
 
 # add location following inspection and creating a CSV file with relevant assignment from first step: data_Location_B_M_Step_1
 
@@ -629,19 +479,19 @@ dfTmp1<-merge(CSBdata,data_Location_B_M_Step_1,by=c("GTY_Code","Flag_CTY_Code","
   
 **Step 2**:  The Soviet Union data for unassigned otter trawls were examined by the combination of three factors - target fishery (only groundfish and krill were represented), CCAMLR catch reporting areas, and year.  For the groundfish fishery, some combinations were dominated by krill with comparatively few groundfish represented.  These were assigned to midwater trawling, with the remainder assigned to bottom fishing.
   
-```{r,echo=FALSE}
-# check OT,SUN,TFN=c(1,6) in more detail as still uncertain
+```{r GTstep2,echo=FALSE}
+# check OT,SUN,TFN=c(1,6) in more detail as still uncertain - once done, this code can be turned off with logical
 
-CheckSUN_OTassignments<-FALSE
-if(CheckSUN_OTassignments){
-  dfSUN<-CSBdata[CSBdata[,"GTY_Code"]=="OT" 
-              & CSBdata[,"Flag_CTY_Code"]=="SUN"
-              & CSBdata[,"TFN"] %in% c(1,6),]
-  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
-  LevelCombinations<-unique(dfSUN[,Factors])
-  apply(LevelCombinations,1,fnCatch_summary
-        ,dfSUN,Factors,BFTaxa,Threshold=10)
-  } # end if
+                       CheckSUN_OTassignments<-FALSE
+                       if(CheckSUN_OTassignments){
+                                                dfSUN<-CSBdata[CSBdata[,"GTY_Code"]=="OT" 
+                                     & CSBdata[,"Flag_CTY_Code"]=="SUN"
+                                     & CSBdata[,"TFN"] %in% c(1,6),]
+                         Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
+                         LevelCombinations<-unique(dfSUN[,Factors])
+                         apply(LevelCombinations,1,fnCatch_summary
+                               ,dfSUN,Factors,BFTaxa,Threshold=10)
+                         } # end if
 
 # modify location following inspection of SUN data for OT and creating a CSV file with relevant assignment from second step: data_Location_B_M_Step_2
 
@@ -653,8 +503,15 @@ GTY_rev<-CSBdata[,"GTY_Code"]
 GTY_rev[GTY_rev=="OT"]<-unlist(lapply(CSBdata[GTY_rev=="OT","Location"],function(g){paste("OT",g,sep="")}))
 CSBdata<-cbind(CSBdata,GTY_rev)
 
-# plot revised assignments
+```
 
+
+
+
+```{r plotGearTypeRev, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) for each major gear type in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019 with Otter Trawl Nei assigned to bottom or midwater (see text for details))*", fig.show='hold', fig.align='center', echo=FALSE}
+
+# plot revised assignments
+if(plotGearTypeRev){
 res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
                 ,Gear=GT_Names[match(CSBdata[,"GTY_rev"],GT_Names[,"Gear"]),"GTn"]
                 ,Tonnes = CSBdata[,"Green_Weight"])
@@ -688,27 +545,313 @@ p <- p + scale_fill_discrete(name = "Gear", breaks=levels(factor(res[,"Gear"]))
                              ,type=pGT_Names[,"Colour"]) # change legend labels
 
 p
+} # end if plotGearTypeRev
 
 ```
   
 
 A revised GTY code is added to the main data frame along with an assignment of all fisheries to a location in the water column in which the gear was deployed:
 
-**GTY_rev**    Revised GTY_Code to replace OT code
-**Location**   Gear deployed on or near to the bottom (B) or midwater (M).
+**GTY_rev**    Revised GTY_Code to replace OT code  
+**Location**   Gear deployed on or near to the bottom (B) or midwater (M).  
+  
+  
+    
+### Nations
+
+```{r NationsSetup, echo=FALSE}
+
+                      CheckSUN_OTassignments<-FALSE
+                       if(CheckSUN_OTassignments){
+                                dfSUN<-CSBdata[CSBdata[,"Flag_CTY_Code"]=="SUN" &
+                                               (CSBdata[,"GAR_Code"]=="48"),]
+                         Factors<-c("GTY_Code","TFN","GAR_Code","Split_Year")
+                         LevelCombinations<-unique(dfSUN[,Factors])
+                         apply(LevelCombinations,1,fnCatch_summary
+                               ,dfSUN,Factors,BFTaxa,Threshold=2)
+                         } # end if
+
+CheckStatAreaAssignments<-FALSE
+if(CheckStatAreaAssignments){
+dfcombo<-CSBdata[,] # CSBdata[,"GAR_Code"] %in% c("48","58","88")
+  Factors<-c("GTY_Code","GTY_rev","Flag_CTY_Code","TFN","GAR_Code","Split_Year")
+  LevelCombinations<-unique(dfcombo[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfcombo,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+
+
+##################################################################################################
+tempContinue<-FALSE
+
+if(tempContinue){
+
+# check catches by species
+  
+cat("Total catch of individual tax (where a catch in one year by a nation of the taxon :",sep="")
+     
+  df<-aggregate(df2[,"Tonnes"],by=list(df2[,"Nation"]),sum)
+  dimnames(df)[[2]]<-c("Nation","Tonnes")
+
+
+  
+  
+# determine first and last years
+  
+  TrawlGfish_CTY<-df[,"Nation"]
+  YearFirst<-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){min(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
+  YearLast <-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){max(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
+df<-cbind(df,YearFirst,YearLast)
+
+
+
+# add zeros for each Nation*Decade 
+
+decade<-seq(1960,2010,10)
+CTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,CT){return(data.frame(Decade=rep(decade[t],length(CT))
+                                                                                              ,Country=CT
+                                                                                              ,Tonnes=rep(0,length(CT))
+                                                                                              ))},decade,CT_Names[,"CTn"]))
+
+
+res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
+                ,Gear=GT_Names[match(CSBdata[,"GTY_Code"],GT_Names[,"Gear"]),"GTn"]
+                ,Tonnes = CSBdata[,"Green_Weight"])
+res1<-rbind(res1,GTzeros)
+res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"]),sum))
+dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
+
 
 
 
   
-#### Nations
+  
+  p <- ggplot(df, aes(x = factor(df[,"Nation"]), y = df[,"Tonnes"], fill = factor(df[,"Country"])))
+  p <- p + geom_col(position = "dodge")
+  p <- p + labs(x = "Gear", y ="Tonnes", fill = "Country",title=paste(CatchTaxon[ct]," catch by gear for countries",sep=""))
+  p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
+  p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+  p
+  
+ plots<- c(plots,list(p))
+ 
+} # end tempContinue
 
-**Bentho-pelagic fisheries**  
+
+
+```
+
+#### Bentho-pelagic fisheries**  
   
   
-**Pelagic fisheries**  
+#### Pelagic fisheries**  
   
 
-#### MEASO-CCAMLR reporting areas  
+## Dividing CCAMLR data into MEASO reporting areas  
+
+
+```{r test,echo=FALSE}
+
+CheckRecords<-FALSE
+if(CheckRecords){
+dfcombo<-CSBdata[CSBdata[,"GAR_Code"] %in% c("58"),]
+  Factors<-c("Catch_TXN_Code","Split_Year")
+  LevelCombinations<-unique(dfcombo[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfcombo,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+
+
+```
+
+### Bottom fisheries
+
+@RN6645 indicates that bottom fisheries are straight forward to translate from ASD areas to MEASO areas except for Subarea 48.1 and Division 58.4.1 (see his Figure 61). 
+
+
+Method:
+Factor 1: GT_rev = OTB
+
+#### Area 48  
+  
+Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
+  
+In Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
+  
+In Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding to two SSMUs - South Orkney West and South Orkney North East.  
+  
+In Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
+  
+Without other corroborating information, these seabed areas were used to distribute the catch amongst MEASO areas when there was no other information to better locate the catch.  
+  
+  
+**B01: Area 48 bottom trawl**  
+
+The distribution of catch amongst MEASO areas for this rule is
+
+    ASD: MEASO areas with proportions greater than 0
+
+This applied to the following records:
+
+    Country, split year, catch
+
+  
+**B02: Subarea 48.1 bottom trawl**  
+  
+The distribution of catch amongst MEASO areas for this rule is
+
+    ASD: MEASO areas with proportions greater than 0
+
+This applied to the following records:
+
+    Country, split year, catch
+  
+  
+**B03: Subarea 48.1 longline**  
+
+The distribution of catch amongst MEASO areas for this rule is
+
+    ASD: MEASO areas with proportions greater than 0
+
+This applied to the following records:
+
+    Country, split year, catch
+    
+    
+#### Area 58  
+  
+B04   Area 58         - trawl    - SUN - finfish - concentrated in subantarctic areas.  no record of working around Prince Edward/Marion  
+B05   Area 58         - trawl    - SUN - mostly finfish from subantarctic (separate chaenodraco from mackerel icefish) but 28000 t krill from antarctic.
+B06   Area 88         - trawl    - POL - check catch is not pelagic.  apply M02
+B07   Division 58.4.1 - longline - check in haul data, also check catch limits according to SSRUs.
+B08   Division 58.4.1 - longline - NZ - would normally fish close to Ross Sea.
+B09   Division 58.4.1 - trawl    - AUS - likely same vessel as 58.4.3 in that year
+
+
+#### Area 88
+
+
+B10   Subarea 88.1    - longline - check haul data, also check catch limits according to SSRUs/research blocks (remove 88.1A from WPA and place in EIA)
+B11   Subarea 88.1    - trawl    - NZ - likely a research voyage in Ross Sea.
+B12   Subarea 88.2    - longline - check haul data, also check catch limits separating east and west SSRUs (and reports in following year on what was caught in each)
+B13   Subarea 88.3    - longline - Korea - check in haul data, also check catch limits according to SSRUs/research blocks - is there anything in subantarctic.
+
+
+### Midwater fisheries
+
+M01   Area 48         - trawl - SUN/LVA - spread around finfishing grounds of Area 48.
+M02   Subarea 48.1    - krill - by SSMU areas around islands - not including the east AP or the western SSMUs.
+
+M03   Subarea 58.4    - krill - Korea - are these likely to be predominantly from CIA
+M04   Subarea 58.4    - krill - SUN - are these likely from Prydz Bay
+M05   Division 58.4.1 - krill - relative areas based on depth range - 1000 - 3000 m - check Steve Nicol's descriptions
+M06   Division 58.4.1 - krill - Japan - in EIA as activities in East of division.
+M07   Division 58.4.1 - krill - Japan - in CIA as activities in west of division.
+
+M08   Area 88         - trawl - mix of krill and silverfish
+M09   Subarea 88.1    - krill - how much was in WPA versus around Balleny Islands in EIA
+M10   Subarea 88.2    - krill - was most fishing in WPA
+
+
+
+From Mike
+I didn't describe the layers used, but the iceshelf is a shapefile from the ADD version 6
+
+
+I've copied it into your home folder, you might be able to download it from there - or just use it in place. 
+https://ace-ecostats.ace-eco-stats.cloud.edu.au/
+ 
+Your user name is "acon" and the pw is that in reverse (please change that type 'passwd' in the Terminal)
+ 
+ 
+d <- readRDS("~/gebco_cells_2000m.rds")
+
+In your home folder “cells_ssmu_ssru.rds”
+
+
+The grid is 
+
+prj <- "+proj=laea +lat_0=-90 +datum=WGS84"
+template <- raster(extent(-5398000, 5386000, -5260000, 5570000), nrows = 5415, ncols = 5392, 
+   crs = prj)
+
+and with that you can populate the cells indexed from the cell column, e.g. 
+
+r <- template
+## turn the code into an integer
+r[d1$cell] <- as.integer(factor(d1$ssmu))
+plot(r )
+
+
+
+ 
+## for eg. sqkm
+library(dplyr)
+ 
+ d  %>% group_by(subarea) %>% summarize(n() * 2 * 2)
+`summarise()` ungrouping output (override with `.groups` argument)
+# A tibble: 19 x 2
+   subarea `n() * 2 * 2`
+
+
+old code for plotting krill results
+load("CatchGrid")
+cst <- sf::read_sf("Aad_coastline Drawing.shp")
+cst <- sf::st_set_crs(cst, 4326)
+g <- raster::rasterFromXYZ(Res)
+p <- raster::rasterToPolygons(g)
+
+## now sf
+library(sf)
+pp <- sf::st_segmentize(sf::st_as_sf(p), 0.1)  ## segmentize so curvy
+pp <- sf::st_set_crs(pp, 4326)  ## longlat/WGS84
+
+library(ggplot2)
+prj <- "+proj=laea +lon_0=0 +lat_0=-90 +datum=WGS84"
+crs <- sf::st_crs(prj)
+ggplot(st_transform(pp, crs), aes(fill = Catch)) + geom_sf()  + geom_sf(data = cst, aes(fill = NULL)) 
+
+
+
+
+```{r ASD_MEASO_compare, echo=FALSE}
+
+# use data from file read into ASD_depth_propInMEASOareas
+
+############################ Methods from Mike
+d <- readRDS("~/gebco_cells_2000m.rds")
+ 
+
+library(dplyr)
+ 
+## for eg. sqkm
+d  %>% group_by(subarea) %>% summarize(n() * 2 * 2)
+
+#######################################
+
+
+
+Depth_intervals<-unique(ASD_depth_propInMEASOareas[,"DepthRange"])
+
+SplitASD<-apply(ASD_depth_propInMEASOareas[,c(3:16)],1,max)<1
+
+df<-ASD_depth_propInMEASOareas[SplitASD &   # only records that are split across areas, exclude "Outside" rows and columns
+                               ASD_depth_propInMEASOareas[,1]!="Outside",c(1:17)]
+df[,c(3:17)]<-round(df[,c(3:17)],2)
+SplitASD <- unique(df[,1])
+
+
+```
+
+```{r,echo=FALSE}
+a<-"48.1"; print.data.frame(df[df[,1]==a,c(1,3:17)],2,row.names = FALSE)
+
+```
+
 
 ```{r,echo=FALSE}
 # examine data reported for Areas as a whole
@@ -743,7 +886,10 @@ if(CheckGeneralAssignments){
 ```
 
 
-### The effects of fishing on the ecosystem
+
+
+## Aggregating data into MEASO areas
+## Assessment of fisheries for MEASO
 
 Method: Data for a fishery is extracted from the Bulletin and catches summed with the following factors: Year, Nation, Taxon. For each fishery, summaries are provided on:
 
@@ -762,58 +908,6 @@ Method: Data for a fishery is extracted from the Bulletin and catches summed wit
 ```
 
   
-# check catches by species
-  
-cat("Total catch of individual tax (where a catch in one year by a nation of the taxon :",sep="")
-     
-  df<-aggregate(df2[,"Tonnes"],by=list(df2[,"Nation"]),sum)
-  dimnames(df)[[2]]<-c("Nation","Tonnes")
-
-  
-# determine first and last years
-  
-  TrawlGfish_CTY<-df[,"Nation"]
-  YearFirst<-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){min(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
-  YearLast <-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){max(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
-df<-cbind(df,YearFirst,YearLast)
-
-```
-
-# add zeros for each Nation*Decade 
-
-decade<-seq(1960,2010,10)
-CTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,CT){return(data.frame(Decade=rep(decade[t],length(CT))
-                                                                                              ,Country=CT
-                                                                                              ,Tonnes=rep(0,length(CT))
-                                                                                              ))},decade,CT_Names[,"CTn"]))
-
-res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
-                ,Gear=GT_Names[match(CSBdata[,"GTY_Code"],GT_Names[,"Gear"]),"GTn"]
-                ,Tonnes = CSBdata[,"Green_Weight"])
-res1<-rbind(res1,GTzeros)
-res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"]),sum))
-dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
-
-
-
-
-  
-  
-  p <- ggplot(df, aes(x = factor(df[,"Nation"]), y = df[,"Tonnes"], fill = factor(df[,"Country"])))
-  p <- p + geom_col(position = "dodge")
-  p <- p + labs(x = "Gear", y ="Tonnes", fill = "Country",title=paste(CatchTaxon[ct]," catch by gear for countries",sep=""))
-  p<-p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
-  p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
-               ,panel.background = element_blank()
-               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
-#  p <- p + scale_fill_discrete(name = "Gear type", breaks=levels(factor(res[,"Gear"])),labels = CRfishingGear[CRfishingGear[,"GTY_Code"]  %in%  levels(factor(res[,"Gear"])),"GTY_Name"]) # change legend labels
-  p
-  
- plots<- c(plots,list(p))
- 
-} # end ct
-
-```
 
 
 
@@ -833,3 +927,5 @@ ggplot(dat,
     
 
 
+# References    
+.     
