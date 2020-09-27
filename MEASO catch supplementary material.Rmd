@@ -30,6 +30,11 @@ WorkDir<-('C:\\_w\\_d\\Catch\\')
             # The code here strips away the testing routines.
 #
 
+# Output flags
+
+printMaps<-FALSE
+
+
 ############# data files needed to support analyses #######################
 
 ASD_depth_propInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_propInMEASOareas.rds")
@@ -55,7 +60,7 @@ CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\R
 CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
 
-# files with results from assignment of records to location of fishing gears - bottom (B) or midwater (M)
+# files with results from manual assignment of records to location of fishing gears - bottom (B) or midwater (M)
 resultsDir<-"C:/_w/_r/Southern-Ocean-Catch/"
 data_Location_B_M_Step_1<-read.csv2(paste(resultsDir,'B-M Step1.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
@@ -239,6 +244,38 @@ NextYear<-!is.na(CSBdata[,"Month"]) & CSBdata[,"Month"]>6
 Split_Year[NextYear]<-Split_Year[NextYear]+1
 CSBdata<-cbind(CSBdata,CC_Season,Split_Year)
 
+
+########################################################################
+# modify records to enable use of rules to assign catches to MEASO areas
+
+# NOTE - IF RECORDS ARE MODIFIED TO CHANGE GROUP - MAKE CHANGES IN "B-M Step1.CSV" OR "B-M Step2.CSV" AS REQUIRED 
+#        ALSO ADD RECORDS APPROPRIATE FOR ASSIGNING RULES TO DISTRIBUTE CATCHES
+
+########
+# Case 1: SUN catch in Area 58 in years 1978, 1979.  Has Antarctic krill and Subantarctic fish species. Reassign krill to 
+# midwater trawl (not bottom trawl) and krill fishery rather than groundfish fishery
+
+dfSelect <- (CSBdata[,"Flag_CTY_Code"]=="SUN" 
+          & CSBdata[,"GAR_Code"]=="58" 
+          & (CSBdata[,"Calendar_Year"]=="1978" | CSBdata[,"Calendar_Year"]=="1979")
+          & CSBdata[,"Catch_TXN_Code"]== "KRI")
+CSBdata[dfSelect,"TFN"] <- 6  # for krill fishery
+
+
+# Added records to "B-M Step2.csv"  :  
+#            OT  SUN  6  58  1978  M
+#            OT  SUN  6  58  1979  M
+
+# Added records to "DistributionRules.csv"
+#         GTY_rev  Flag_CTY_Code  TFN  GAR_Code  Split_Year MEASO    Rule
+#	         OTM        SUN          6      58        1978     CIA     MB05a
+#	         OTM        SUN          6      58        1979     CIA     MB05a
+
+dfSelect <- (CSBdata[,"Flag_CTY_Code"]=="KOR" 
+          & CSBdata[,"GAR_Code"]=="883" )
+CSBdata[dfSelect,]   # for krill fishery
+
+
 ```
 
 
@@ -250,7 +287,7 @@ The MEASO and CCAMLR areas are shown with their naming conventions in Figure \@r
   
   
 ```{r CCAMLR-MEASO-areas, out.width="40%", fig.cap="*CCAMLR statistical reporting areas (left) and MEASO areas (right - red lines indicate zones, black dashed lines indicate sectors)*", fig.show="hold", fig.align='center', echo=FALSE}
-knitr::include_graphics(c("CCAMLR_areas.png","MEASO_areas.png"))
+if(printMaps) knitr::include_graphics(c("CCAMLR_areas.png","MEASO_areas.png"))
 ```
   
     
@@ -259,7 +296,7 @@ The MEASO areas do not perfectly align with CCAMLR areas (Figure \@ref(fig:CCAML
 
 
 ```{r CCAMLR-MEASO-overlay, out.width="70%", fig.cap="CCAMLR statistical reporting areas (blue) overlaid on the MEASO areas (red lines)", fig.align='center', echo=FALSE}
-knitr::include_graphics("MEASO-CCAMLR_combined_areas.png")
+if(printMaps) knitr::include_graphics("MEASO-CCAMLR_combined_areas.png")
 ```
 
   
@@ -653,17 +690,21 @@ dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
 ## Dividing CCAMLR data into MEASO reporting areas  
 
 
-```{r test,echo=FALSE}
+```{r DCprepare,echo=FALSE}
+
+# create new data.frame of fishery records for applying rules
+
+
+ 
 
 CheckRecords<-FALSE
 if(CheckRecords){
-dfcombo<-CSBdata[CSBdata[,"GAR_Code"] %in% c("58"),]
-  Factors<-c("Catch_TXN_Code","Split_Year")
+dfcombo<-CSBdata[CSBdata[,"Catch_TXN_Code"] %in% c("WIC"),]
+  Factors<-c("Flag_CTY_Code","GAR_Code")
   LevelCombinations<-unique(dfcombo[,Factors])
   apply(LevelCombinations,1,fnCatch_summary
         ,dfcombo,Factors,BFTaxa,Threshold=10)
   } # end if
-
 
 
 ```

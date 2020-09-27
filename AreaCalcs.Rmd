@@ -37,8 +37,8 @@ Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
 CompareWithCCAMLR<-FALSE
 
 Depth_intervals<-data.frame("DepthRange" = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
-                           ,"Minimum"    = c(-100,-100, -600,-100,  -300,  -600,  -600,-100)
-                           ,"Maximum"    = c(-600,-700,-1800,-700,-10000,-10000,-10000,-800)
+                           ,"Minimum"    = c(-100,-100, -600,-100,  -3000,  -600,  -600,-100)
+                           ,"Maximum"    = c(-600,-700,-1800,-700,-10000,-3000,-10000,-800)
                             )# end data frame
 
 MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
@@ -236,6 +236,15 @@ if (SaveRdata_areas) saveRDS(ASD_depth_AreaInMEASOareas,file=FileRdata_areas)
 
 # Distributing catches based on Seabed Areas in Specific Cases
 
+Catch records in the Bulletin were reviewed by split year and grouped by ASD area, Flag Country, Gear type (revised as above), Fishery, and Taxa with annual catches by country greater than 10 tonnes (assumed to relate to commercial quantities of groundfish or toothfish).  
+
+Fisheries since 1990 are well described in CCAMLR reports, particularly fishery reports for toothfish, mackerel icefish and Antarctic krill (http://fisheryreports.ccamlr.org/).  Catch reports that were aggregated across a number of ASD areas prior to 1990 had their the last year of reports as follows:
+
+  - only by Statistical Areas 48 (Atlantic), 58 (Indian), and 88 (Pacific) by the main fishing nations were the split-years 1986, 1979, 1986 respectively. Latvia had a single reported fishing year for a low catch of krill in Area 48 in 1993.
+  - only by Subarea 58.4 and 58.5 ended in 1987 and 1988 respectively
+  - only by 58.4.3 and 58.4.4, ended by 1999 and 1980 respectively.
+
+A csv file was generated in Excel to identify the distribution rule to be used for each unique group of records.
 
 
 ```{r CatchDistSetup, echo=FALSE}
@@ -261,6 +270,7 @@ fnPropInMareaForRule<-function(cbed_a,M_areas,FixedProp=FALSE){   # if FixedProp
      return(res)
      } # end fnPropInMarea
 
+ 
 
 ```
 
@@ -270,13 +280,17 @@ fnPropInMareaForRule<-function(cbed_a,M_areas,FixedProp=FALSE){   # if FixedProp
 
 Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
   
-In Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
+While not ideal, catches aggregated at the level of Statistical Area were assigned to subareas according to the proportions of trawlable seabed area across Subareas 48.1, 48.2 and 48.3 [@RN6645].  
+- Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
+- Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding to two SSMUs - South Orkney West and South Orkney North East.  
+- Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
   
-In Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding to two SSMUs - South Orkney West and South Orkney North East.  
+Fishing grounds in Subareas 48.2 and 48.3 fall within the Antarctic Zone and Subantarctic Zones respectively in the Atlantic Ocean sector.  Subarea 48.1 was separated into the Atlantic and East Pacific Sectors of the Antarctic Zone according to the locations of trawlable seabed in that area.  
   
-In Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
-
-
+For longline fisheries, the following considerations applied:  
+- Chilean pot fishing research in 1998 is listed as a longline fishery in the Bulletin data.  It was concentrated in Subarea 48.1 around Elephant Island and the South Shetland Islands.  The SSMUs in these areas, as for trawl fishing, were used but with the depth range for longline fishing to calculate the proportion of area in each sector.  
+- Subarea 48.6 was divided into northern and southern fisheries at 60oS.  This Subarea primarily falls in the Antarctic Zone of the Atlantic Sector.  Catches were assumed to be in the Antarctic Zone. 
+  
 ```{r CD_Bottom_Area48, echo=FALSE}
 
 RuleName        <- "B01"
@@ -291,10 +305,10 @@ dfR <- Cbed_rules[
           (Cbed_rules[,"ASD"]=="48.1" & 
               (     (    Cbed_rules[,"SSMU"]=="APBSE" 
                        & Cbed_rules[,"Lon"]>-56 
-                       & Cbed_rules[,"Lon"]>-63.3)
+                       & Cbed_rules[,"Lat"]>-63.3)
                   | (    Cbed_rules[,"SSMU"]=="APE"   
                        & Cbed_rules[,"Lon"]>-56
-                       & Cbed_rules[,"Lon"]>-63.3) 
+                       & Cbed_rules[,"Lat"]>-63.3) 
                ) 
               |  Cbed_rules[,"SSMU"]=="APDPW" 
               |  Cbed_rules[,"SSMU"]=="APDPE" 
@@ -327,8 +341,8 @@ RuleFactorLevels <- list(GTY_rev = "OTB",GAR_Code = 481)
 
 dfR <- Cbed_rules[
           (Cbed_rules[,"ASD"]=="48.1" & 
-                  ( (Cbed_rules[,"SSMU"]=="APBSE" & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lon"]>-63.3) |
-                    (Cbed_rules[,"SSMU"]=="APE"   & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lon"]>-63.3) ) | 
+                  ( (Cbed_rules[,"SSMU"]=="APBSE" & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) |
+                    (Cbed_rules[,"SSMU"]=="APE"   & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) ) | 
                   Cbed_rules[,"SSMU"]=="APDPW" | 
                   Cbed_rules[,"SSMU"]=="APDPE" | 
                   Cbed_rules[,"SSMU"]=="APEI"   )
@@ -349,15 +363,18 @@ names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 RuleName        <- "B03"
 TypeDepthInterval<-3 # row of data frame Depth_intervals
 
-RuleDescription <- "Subarea 48.1-longline-Chile - likely to be around Elephpant Island."
+RuleDescription <- "Subarea 48.1-longline-Chile - WG-FSA-98/20 - South Shetlands." # was really pots but sticking with the Bulletin here.
 RuleFactorLevels <- list(GTY_rev = "LLS",Flag_CTY_Code = "CHL",GAR_Code = 481)
 
 # subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
 
 dfR <- Cbed_rules[
-          (Cbed_rules[,"ASD"]=="48.1" & 
-                  Cbed_rules[,"SSMU"]=="APEI"   )
+           Cbed_rules[,"ASD"]=="48.1" & 
+              (  Cbed_rules[,"SSMU"]=="APDPW" 
+              |  Cbed_rules[,"SSMU"]=="APDPE" 
+              |  Cbed_rules[,"SSMU"]=="APEI"   )
           ,]
+ 
 
 CatchDistRules<-c(CatchDistRules
                  ,list(RuleName = list(
@@ -369,6 +386,20 @@ CatchDistRules<-c(CatchDistRules
                          )) # end distribution rule
                   ) # end bind
 names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+```
+  
+### Area 58
+
+@RN6645 describes the early fisheries in the Indian Sector as being dominated by finfish fishing in the Subantarctic Zone, primarily around Kerguelen Islands and Ob and Lena Banks.  Krill fishing also occurred in the Antarctic Zone in Prydz Bay.  While some fishing occurred on *Chaenodraco wilsoni* in the Antarctic Zone, which may have occurred in Divisions 58.4.1 and 58.4.2, the main fisheries occurred in the Central Indian Sector.  
+  
+Records containing both Antarctic krill and the finfish taxa from the Subantarctic Zone need to be separated between the zones rather than distributing each of the taxa between zones.  These records were duplicated by removing Antarctic krill and other taxa that were from the Antarctic Zone from the main record and then creating a record for the Antarctic Zone taxa.  The distribution rules for each of these adjusted records were to allocate the whole catch to their respective zones.  
+  
+For longline fisheries, Division 58.4.1 is the only ASD area which crosses two sectors.  The longline fishery is wholly within the Antarctic Zone.  Until recently, longline fisheries in this division were constrained to three Small-scale research units - 5841C, 5841E, 5841G.  5841A was open also but comprised only a few seamounts.  Relative proportions of seabed area across these SSRUs in the two sectors is used to divide the catch.  
+  
+  
+```{r CD_Bottom_Area58, echo=FALSE}
 
 ##############################################################################################
 RuleName        <- "B04"
@@ -413,12 +444,15 @@ names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 RuleName        <- "B06"
 TypeDepthInterval<-3 # row of data frame Depth_intervals
 
-RuleDescription <- "Division 58.4.1-longline-check catch limits and reports one year later"
+RuleDescription <- "Division 58.4.1-longline-sea ice made fishing variable in location across SSRUs" 
 RuleFactorLevels <- list(GTY_rev = "LLS",GAR_Code = 5841)
 
 dfR <- Cbed_rules[
           (  Cbed_rules[,"ASD"]=="58.4.1" 
- #          & Cbed_rules[,"SSRU"]=="APEI"     # add SSRUs later ########################
+           & (  Cbed_rules[,"SSRU"]=="581C" 
+              | Cbed_rules[,"SSRU"]=="581E"  
+              | Cbed_rules[,"SSRU"]=="581G"
+              )
            )
           ,]
  
@@ -455,7 +489,7 @@ names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 RuleName        <- "B08"
 TypeDepthInterval<-1 # row of data frame Depth_intervals
 
-RuleDescription <- "Area 58.4.1-trawl-Aus- south of BANZARE Bank"
+RuleDescription <- "Area 58.4.1-trawl-Aus- south of BANZARE Bank"  
 RuleFactorLevels <- list(GTY_rev = "OTB",Flag_CTY_Code = "AUS",GAR_Code = 5841)
 
 CatchDistRules<-c(CatchDistRules
@@ -471,19 +505,267 @@ names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 
 ```
+  
+  
+### Area 88  
+
+Bottom trawling appears in the records for Area 88 infrequently.  In 1978, Poland undertook bottom trawling.  When the records were examined closely and in monthly sequence with Subarea 48.1, it was apparent that, given the small catch, this was likely research in the Bellingshausen Sea extending the west Antarctic Peninsula research fishing into Subarea 88.3.  The other bottom trawling to occur was a trawl survey by NZ in during the Census of Antarctic Marine Life in Subarea 88.1 the Ross Sea.  
+  
+Longline fishing began in Subarea 88.1 in 1997.  In the first two years it was undertaken south of 65oS in the Ross Sea.  In 1999, Small-scale Research Units (SSRUs) were established by CCAMLR (SC-CAMLR, 1999, Table 6).  These were revised over a number of years but Cape Adare was used as one of the dividing lines of these SSRUs.  Until the establishment of the MPA in the Ross Sea in 2016, the management of the longline fishery was via the SSRUs in Subarea 88.1 and SSRUs A and B in Subarea 88.2.  The component of Subarea 88.1 in the East Indian Sector has been closed since the 2005/06 season with it mostly closed prior to that.  For this reason, longline catches in Subarea 88.1 are allocated to the West Pacific Sector in the Antarctic Zone.  
+  
+For Subarea 88.2, longline fishing has been primarily in the eastern margins related to the Amundsen Sea, with catches allowed in SSRUs C-G.  The crossover between the West and East Pacific Sectors occurs in SSRU 882E, which also has the highest allocation of catch among the SSRUs in the Subarea.  Given that access was dependent on variability in the sea ice, the distribution of catches in this subarea was according to the proportions of seabed for longline fishing among SSRUs C-G.  
+  
+For Subarea 88.3, Korea has been undertaking a longline research program since their proposal was submitted to SC-CAMLR in 2015.  It is undertaken in research blocks in the Antarctic Zone of the East Pacific Sector.
+
+  
+```{r CD_Bottom_Area88, echo=FALSE}
+
+##############################################################################################
+RuleName        <- "B09"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 88-trawl-POL-likely in 88.3 as extension of 48.1 research"  # when scrutinised for taxa and monthly sequence
+RuleFactorLevels <- list(GTY_rev = "OTB",Flag_CTY_Code = "POL",GAR_Code = 58)
+
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B10"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-longline-fishery concentrated south of 65oS and east of Cape Adare."
+
+RuleFactorLevels <- list(GTY_rev = "LLS",GAR_Code = 881)
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B11"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-trawl-NZ-CAMLR research survey in Ross Sea"
+
+RuleFactorLevels <- list(GTY_rev = "OTB",Flag_CTY_Code = "NZ",GAR_Code = 881)
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "B12"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 8821-longline-sea ice made fishing variable in location across SSRUs" 
+RuleFactorLevels <- list(GTY_rev = "LLS",GAR_Code = 882)
+
+dfR <- Cbed_rules[
+          (  Cbed_rules[,"ASD"]=="88.2" 
+           & (  Cbed_rules[,"SSRU"]=="882C" 
+              | Cbed_rules[,"SSRU"]=="882D"  
+              | Cbed_rules[,"SSRU"]=="882E"
+              | Cbed_rules[,"SSRU"]=="882F"
+              | Cbed_rules[,"SSRU"]=="882G"
+              )
+           )
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 
-B09   Area 88         - trawl    - POL - check catch is not pelagic.  apply M02
-B10   Subarea 88.1    - longline - check haul data, also check catch limits according to SSRUs/research blocks (remove 88.1A from WPA and place in EIA)
-B11   Subarea 88.1    - trawl    - NZ - likely a research voyage in Ross Sea.
-B12   Subarea 88.2    - longline - check haul data, also check catch limits separating east and west SSRUs (and reports in following year on what was caught in each)
-B13   Subarea 88.3    - longline - Korea - check in haul data, also check catch limits according to SSRUs/research blocks - is there anything in subantarctic.
+##############################################################################################
+RuleName        <- "B13"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.3-longline-Korea-Research fishing in research blocks- see SC-CAMLR (2015, 2016)"
+
+RuleFactorLevels <- list(GTY_rev = "LLS",Flag_CTY_Code = "KOR",GAR_Code = 883)
+
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+```
+  
+  
+## Midwater fishing
+
+### Area 48
+  
+Krill fishing in the 1970s occurred in Areas 48 and 58.  During this period, the Soviet Union fishing vessels would fish for krill if the catches of finfish were poor [@RN6645]. In order to distribute the catch by the Soviet Union attributed to Area 48, the spatial pattern adopted for bottom fishing was adopted here, with the proportion of catches in the different MEASO areas determined by seabed areas for krill fishing in SSMUs in Subarea 48.1 (APDPW, APDPE, APEI, and the northeast part of APBSE), Subarea 48.2 (SOW,SONE) and depths in Subarea 48.3. 
+
+???? look in Selected Scientific Papers to help with this.... also the submissions to WG-Krill and its reports.  what is the foundation for the depth range.
+
+Distribution of midwater catches between MEASO areas was only ambiguous for Subarea 48.1.  Given the expansion of interest in krill fishing, catches were distributed between the East Pacific Antarctic area from the Atlantic Antarctic area according to the distribution of the depth strata The remaining midwater catches 
+
+While krill fisheries concentrated near to South Georgia.  Myctophid fisheries were attempted in the northern part of Subarea 48.3, the area of which was surveyed in the late 1980s [@RN4306].  Both these fisheries occur in the Subantarctic Zone.
+
+  
+```{r CD_Midwater_Area48, echo=FALSE}
+
+##############################################################################################
+RuleName        <- "M01"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 48-trawl-SUN-all of Area 48 - based on B01"
+RuleFactorLevels <- list(GTY_rev = "OTM", Flag_CTY_Code="SUN",GAR_Code = 48)
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+              (     (    Cbed_rules[,"SSMU"]=="APBSE" 
+                       & Cbed_rules[,"Lon"]>-56 
+                       & Cbed_rules[,"Lat"]>-63.3)
+                  | (    Cbed_rules[,"SSMU"]=="APE"   
+                       & Cbed_rules[,"Lon"]>-56
+                       & Cbed_rules[,"Lat"]>-63.3) 
+               ) 
+              |  Cbed_rules[,"SSMU"]=="APDPW" 
+              |  Cbed_rules[,"SSMU"]=="APDPE" 
+              |  Cbed_rules[,"SSMU"]=="APEI"   )
+      |   (Cbed_rules[,"ASD"]=="48.2" & 
+               ( Cbed_rules[,"SSMU"]=="SOW" 
+              |  Cbed_rules[,"SSMU"]=="SONE"))| 
+           Cbed_rules[,"ASD"]=="48.3"
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "M02"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 48.1-trawl-depth range less eastern areas south of latitude of Joinville Island."
+RuleFactorLevels <- list(GTY_rev = "OTM", GAR_Code = 481)
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+             
+              !(    Cbed_rules[,"SSMU"]=="APE" # Antarctic Peninsula East 
+                       & Cbed_rules[,"Lat"] < -63.3)
+           
+              !(    Cbed_rules[,"SSMU"]=="APPA" # Antarctic Peninsula Pelagic Area  
+                       & Cbed_rules[,"Lon"] > -57
+                       & Cbed_rules[,"Lat"] < -63.3) 
+               ) 
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+```
+  
+  
+### Area 58
+  
+check MO3 - what was the actual catch for distributing in Area 58 (was it likely to be Prydz Bay)
+
+ 
+```{r CD_Midwater_Area58, echo=FALSE}
+
+##############################################################################################
+RuleName        <- ""
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 88-trawl-"
+RuleFactorLevels <- list(GTY_rev = "OTB",GAR_Code = 58)
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "MB05a"  # for replication of the records to have only krill - remove krill from other records, change GTY_rev to "OTM"
+
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58-trawl-SUN-subantarctci finfish (inspected data) but with Antarctic krill in 1978 & 1979"
+RuleFactorLevels <- list(GTY_rev = "OTM",Flag_CTY_Code = "SUN",GAR_Code = 58)
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 
 
-M01   Area 48         - trawl - SUN/LVA - spread around finfishing grounds of Area 48.
-M02   Subarea 48.1    - krill - by SSMU areas around islands - not including the east AP or the western SSMUs.
-
+```
+  
+  
 M03   Area 58         - trawl - SUN - early years were in subantarctic
 M04   Subarea 58.4    - krill - Korea - are these likely to be predominantly from CIA
 M05   Subarea 58.4    - krill - SUN - are these likely from Prydz Bay
@@ -491,6 +773,36 @@ M06   Division 58.4.1 - krill - relative areas based on depth range - 1000 - 300
 M07   Division 58.4.1 - krill - Japan - in EIA as activities in East of division.
 M08   Division 58.4.1 - krill - Japan - in CIA as activities in west of division.
 
+
+  
+### Area 88
+  
+```{r CD_Midwater_Area88, echo=FALSE}
+
+##############################################################################################
+RuleName        <- ""
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 88-trawl-"
+RuleFactorLevels <- list(GTY_rev = "OTB",GAR_Code = 58)
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(RuleName = list(
+                         FactorLevels = RuleFactorLevels
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+
+```
+  
+  
+  
 M09   Area 88         - trawl - mix of krill and silverfish
 M10   Subarea 88.1    - krill - how much was in WPA versus around Balleny Islands in EIA
 M11   Subarea 88.2    - krill - was most fishing in WPA
