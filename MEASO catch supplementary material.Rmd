@@ -37,9 +37,6 @@ printMaps<-FALSE
 
 ############# data files needed to support analyses #######################
 
-ASD_depth_propInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_propInMEASOareas.rds")
-ASD_depth_AreaInMEASOareas<-readRDS("C:/_w/_r/Southern-Ocean-Catch/ASD_depth_AreaInMEASOareas.rds")
-
 
 # files from CCAMLR Statistical Bulletin 2019
 
@@ -67,6 +64,10 @@ data_Location_B_M_Step_1<-read.csv2(paste(resultsDir,'B-M Step1.csv',sep="")
 data_Location_B_M_Step_2<-read.csv2(paste(resultsDir,'B-M Step2.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
 
+# for distribution of catches among MEASO areas
+Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
+
+
 ################# input data to support analyses #################
 
 
@@ -90,8 +91,7 @@ CT_Names<-data.frame(
                       , "grey25", "grey60")
 ) # end dataframe
 
-
-# details for reporting catch composition - BFTaxa
+     ############ details for reporting catch composition - BFTaxa ###########################
 
 tCode          <- c("TOP","TOA","GRV","MCC","SRX","RAJ","ANT","WGR","GR2","RFA","GR1","ANI","NOS","BYR","LIC","SRR","NOR"
                     ,"ANS","GHP","NOG","NOT","NOX","ICX","KIF","SGI","SSI","WIC","KRI","LXX","MZZ","TRL","ELC","SQA","SPX","SQS","KCF","KCV")
@@ -121,11 +121,40 @@ BFTaxa <- data.frame(Code = tCode,Catch_Group)
 Taxon_Name<-BT_name[match(BFTaxa[,"Catch_Group"],c(1:length(BT_name)))]
 BFTaxa<-cbind(BFTaxa,Taxon_Name)
 
+
+     ############## for distribution of catches amongst MEASO areas ##################################
+
+Depth_intervals<-data.frame("DepthRange" = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs","Krill481")
+                           ,"Minimum"    = c(-100,-100, -600,-100,  -3000,  -1000,  -600,-100,-300)
+                           ,"Maximum"    = c(-600,-700,-1800,-500,-10000,-4000,-10000,-800,-1000)
+                            )# end data frame
+
+MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
+                    ,"AOS","Atlantic Ocean","Subantarctic","48"
+                    ,"AON","Atlantic Ocean","Northern","48"
+                    ,"CIA","Central Indian","Antarctic","58"
+                    ,"CIS","Central Indian","Subantarctic","58" 
+                    ,"CIN","Central Indian","Northern","58"
+                    ,"EIA","East Indian   ","Antarctic","58"
+                    ,"EIS","East Indian   ","Subantarctic","Outside"
+                    ,"EIN","East Indian   ","Northern","Outside"
+                    ,"EPA","East Pacific  ","Antarctic","48"
+                    ,"EPS","East Pacific  ","Subantarctic","48"
+                    ,"EPN","East Pacific  ","Northern","Outside"
+                    ,"WPA","West Pacific  ","Antarctic","88"
+                    ,"WPS","West Pacific  ","Subantarctic","Outside"
+                    ,"WPN","West Pacific  ","Northern","Outside"
+                    ,"Outside","not in MEASO area","",""),byrow=TRUE,ncol=4)
+dimnames(MEASOareas)[[2]]<-c("Code","Sector","Zone","CSB_Stat_Area")
+
+
+
 decade<-seq(1960,2010,10)
 
 
 ################# General utility functions #####################
 
+     ######################## for summarising catch given factors ####################
 fnCatch_summary<-function(fLevel,dCSB,f,BFTaxa,Threshold){
 
      fn<-length(f)
@@ -161,6 +190,32 @@ fnCatch_summary<-function(fLevel,dCSB,f,BFTaxa,Threshold){
 
      } # end catch_summary
 
+
+     ######################## for distributing catch amongst MEASO areas ####################
+fnDepthArea<-function(dInt          # which depth interval
+                     ,dfDepths      # data frame of depth intervals  
+                     ,Cb_dat        # dataframe with "Depth", "Area" 
+                                   #  optional for none, one or both of "MEASO", "ASD"
+                     ){
+# find grouping variables (if any)
+  Groups<-dimnames(Cb_dat)[[2]] 
+  Groups<-Groups[which(Groups %in% c("MEASO","ASD"))]
+# subset data from depth range
+    x<- Cb_dat[(Cb_dat[,"Depth"] <   dfDepths[dInt,"Minimum"] & 
+                Cb_dat[,"Depth"] >=  dfDepths[dInt,"Maximum"]),]
+  if(length(Groups)>0) {
+           GroupBy<-lapply(Groups,function(grp,x1){return(x1[,grp])},x)
+           res <- aggregate(x[,"Area"],GroupBy,sum)
+         
+           names(res)<-c(Groups,"Area")
+            res<-data.frame(res[,Groups],rep(dfDepths[dInt,"DepthRange"],nrow(res)),res[,"Area"])
+           dimnames(res)[[2]]<-c(Groups,"DepthRange","Area")
+           return(res)
+       } else {
+           sumx<-data.frame(DepthRange = dfDepths[dInt,"DepthRange"], Area = sum(x[,"Area"]))
+           return(sumx) 
+       } # end else
+     } # end fnDepthArea
 
 
 ```
@@ -259,21 +314,12 @@ dfSelect <- (CSBdata[,"Flag_CTY_Code"]=="SUN"
           & CSBdata[,"GAR_Code"]=="58" 
           & (CSBdata[,"Calendar_Year"]=="1978" | CSBdata[,"Calendar_Year"]=="1979")
           & CSBdata[,"Catch_TXN_Code"]== "KRI")
-CSBdata[dfSelect,"TFN"] <- 6  # for krill fishery
+CSBdata[dfSelect,"Target_TXN_Code"] <- "KRI"  # for krill fishery
 
 
 # Added records to "B-M Step2.csv"  :  
 #            OT  SUN  6  58  1978  M
 #            OT  SUN  6  58  1979  M
-
-# Added records to "DistributionRules.csv"
-#         GTY_rev  Flag_CTY_Code  TFN  GAR_Code  Split_Year MEASO    Rule
-#	         OTM        SUN          6      58        1978     CIA     MB05a
-#	         OTM        SUN          6      58        1979     CIA     MB05a
-
-dfSelect <- (CSBdata[,"Flag_CTY_Code"]=="KOR" 
-          & CSBdata[,"GAR_Code"]=="883" )
-CSBdata[dfSelect,]   # for krill fishery
 
 
 ```
@@ -692,10 +738,7 @@ dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
 
 ```{r DCprepare,echo=FALSE}
 
-# create new data.frame of fishery records for applying rules
-
-
- 
+# some routines for summarising data
 
 CheckRecords<-FALSE
 if(CheckRecords){
@@ -707,18 +750,54 @@ dfcombo<-CSBdata[CSBdata[,"Catch_TXN_Code"] %in% c("WIC"),]
   } # end if
 
 
+CheckStatAreaAssignments<-FALSE
+if(CheckStatAreaAssignments){
+dfArea<-CSBdata[CSBdata[,"GAR_Code"] %in% c("48","58","88"),]
+  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
+  LevelCombinations<-unique(dfWholeStatArea[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfWholeStatArea,Factors,BFTaxa,Threshold=10)
+  } # end if
+
+
 ```
 
-### Bottom fisheries
+Catch records in the Bulletin were reviewed by split year and grouped by ASD area, Flag Country, Gear type (revised as above), Fishery, and Taxa with annual catches by country greater than 10 tonnes (assumed to relate to commercial quantities of groundfish or toothfish).  
 
-@RN6645 indicates that bottom fisheries are straight forward to translate from ASD areas to MEASO areas except for Subarea 48.1 and Division 58.4.1 (see his Figure 61). 
+Fisheries since 1990 are well described in CCAMLR reports, particularly fishery reports for toothfish, mackerel icefish and Antarctic krill (http://fisheryreports.ccamlr.org/).  Catch reports that were aggregated across a number of ASD areas prior to 1990 had their the last year of reports as follows:
 
-
-Method:
-Factor 1: GT_rev = OTB
-
-#### Area 48  
+  - only by Statistical Areas 48 (Atlantic), 58 (Indian), and 88 (Pacific) by the main fishing nations were the split-years 1986, 1979, 1986 respectively. Latvia had a single reported fishing year for a low catch of krill in Area 48 in 1993.
+  - only by Subarea 58.4 and 58.5 ended in 1987 and 1988 respectively
+  - only by 58.4.3 and 58.4.4, ended by 1999 and 1980 respectively.
   
+  
+```{r CatchDistSetup, echo=FALSE}
+Seabed_areas <- readRDS(Seabed_file)
+# give each cell an area of 2x2 km until it is available in input file
+Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
+
+# rename variables to be consistent with code
+dimnames(Seabed_areas)[[2]]<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","SSRU","SSMU","Area")
+
+Cbed_rules<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]) & !is.na(Seabed_areas[,"ASD"]) & !is.na(Seabed_areas[,"MEASO"]),c("Lon","Lat","Depth","MEASO","ASD","SSMU","SSRU","Area")]
+Cbed_rules[is.na(Cbed_rules[,"SSRU"]),"SSRU"]<-"NA"
+Cbed_rules[is.na(Cbed_rules[,"SSMU"]),"SSMU"]<-"NA"
+
+
+fnPropInMareaForRule<-function(cbed_a,M_areas,FixedProp=FALSE){   # if FixedProp then the areas in cbed_a are proportions
+     res<-rep(0,length(M_areas))
+     if(FixedProp) x<-cbed_a[,"Area"] else x<-cbed_a[,"Area"]/sum(cbed_a[,"Area"])
+     res[match(cbed_a[,"MEASO"],M_areas)]<-round(x,3)
+     names(res)<-M_areas
+     return(res)
+     } # end fnPropInMarea
+
+```
+
+## Area 48
+
+Old Text
+
 Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
   
 In Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
@@ -728,8 +807,298 @@ In Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding t
 In Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
   
 Without other corroborating information, these seabed areas were used to distribute the catch amongst MEASO areas when there was no other information to better locate the catch.  
+
+
+
+----
+Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
   
+While not ideal, catches aggregated at the level of Statistical Area were assigned to subareas according to the proportions of trawlable seabed area across Subareas 48.1, 48.2 and 48.3 [@RN6645].  
+- Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
+- Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding to two SSMUs - South Orkney West and South Orkney North East.  
+- Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
   
+Fishing grounds in Subareas 48.2 and 48.3 fall within the Antarctic Zone and Subantarctic Zones respectively in the Atlantic Ocean sector.  Subarea 48.1 was separated into the Atlantic and East Pacific Sectors of the Antarctic Zone according to the locations of trawlable seabed in that area.  
+  
+For longline fisheries, the following considerations applied:  
+- Chilean pot fishing research in 1998 is listed as a longline fishery in the Bulletin data.  It was concentrated in Subarea 48.1 around Elephant Island and the South Shetland Islands.  The SSMUs in these areas, as for trawl fishing, were used but with the depth range for longline fishing to calculate the proportion of area in each sector.  
+- Subarea 48.6 was divided into northern and southern fisheries at 60oS.  This Subarea primarily falls in the Antarctic Zone of the Atlantic Sector.  Catches were assumed to be in the Antarctic Zone. 
+
+
+Krill fishing in the 1970s occurred in Areas 48 and 58.  During this period, the Soviet Union fishing vessels would fish for krill if the catches of finfish were poor [@RN6645]. In order to distribute the catch by the Soviet Union attributed to Area 48, the spatial pattern adopted for bottom fishing was adopted here, with the proportion of catches in the different MEASO areas determined by seabed areas for krill fishing in SSMUs in Subarea 48.1 (APDPW, APDPE, APEI, and the northeast part of APBSE), Subarea 48.2 (SOW,SONE) and depths in Subarea 48.3. The depth range of 300-1000 m was approximated from the analyses in @RN13713
+
+Distribution of midwater catches between MEASO areas was only ambiguous for Subarea 48.1.  Given the expansion of interest in krill fishing, catches were distributed between the East Pacific Antarctic area from the Atlantic Antarctic area according to the distribution of the depth strata.
+
+While krill fisheries concentrated near to South Georgia.  Myctophid fisheries were attempted in the northern part of Subarea 48.3, the area of which was surveyed in the late 1980s [@RN4306].  Both these fisheries occur in the Subantarctic Zone.
+
+
+  
+```{r CD_Area48, echo=FALSE}
+CatchDistRules<-NULL
+
+############################
+# General distribution rules
+############################
+##############################################################################################
+RuleName        <- "48N00_A"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.2- all fishing - Atlantic Antarctic area"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "482"  
+                 | CSBdata[,"GAR_Code"] == "484"  
+                 | CSBdata[,"GAR_Code"] == "485"  
+                 | CSBdata[,"GAR_Code"] == "486"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("AOA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+##############################################################################################
+RuleName        <- "48N00_S"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- all fishing - Atlantic Subantarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("AOS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+################
+# Bottom fishing
+################
+##############################################################################################
+RuleName        <- "48B0T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 48-trawl-SUN-all of Area 48"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "48"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+  #            & CSBdata[,"TFN"]          == 1
+  #            & CSBdata[,"Split_Year"]   == 1986
+              ) # end RuleSubset
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+              (     (    Cbed_rules[,"SSMU"]=="APBSE" 
+                       & Cbed_rules[,"Lon"]>-56 
+                       & Cbed_rules[,"Lat"]>-63.3)
+                  | (    Cbed_rules[,"SSMU"]=="APE"   
+                       & Cbed_rules[,"Lon"]>-56
+                       & Cbed_rules[,"Lat"]>-63.3) 
+               ) 
+              |  Cbed_rules[,"SSMU"]=="APDPW" 
+              |  Cbed_rules[,"SSMU"]=="APDPE" 
+              |  Cbed_rules[,"SSMU"]=="APEI"   )
+      |   (Cbed_rules[,"ASD"]=="48.2" & 
+               ( Cbed_rules[,"SSMU"]=="SOW" 
+              |  Cbed_rules[,"SSMU"]=="SONE"))| 
+           Cbed_rules[,"ASD"]=="48.3"
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "48B1L"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 48.1-longline-Chile - WG-FSA-98/20 - South Shetlands." # was really pots but sticking with the Bulletin here.
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "481"
+               & CSBdata[,"GTY_rev"]      == "LLS"
+               & CSBdata[,"Flag_CTY_Code"]== "CHL"
+  #            & CSBdata[,"TFN"]          == 3
+  #            & CSBdata[,"Split_Year"]   == 1998
+              ) # end RuleSubset
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+           Cbed_rules[,"ASD"]=="48.1" & 
+              (  Cbed_rules[,"SSMU"]=="APDPW" 
+              |  Cbed_rules[,"SSMU"]=="APDPE" 
+              |  Cbed_rules[,"SSMU"]=="APEI"   )
+          ,]
+ 
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+##############################################################################################
+RuleName        <- "48B1T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 48.1-trawl-spread around finfishing grounds according to Kock, 1992."
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "481"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+  #            & CSBdata[,"Flag_CTY_Code"]
+  #            & CSBdata[,"TFN"]         
+  #            & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+                  ( (Cbed_rules[,"SSMU"]=="APBSE" & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) |
+                    (Cbed_rules[,"SSMU"]=="APE"   & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) ) | 
+                  Cbed_rules[,"SSMU"]=="APDPW" | 
+                  Cbed_rules[,"SSMU"]=="APDPE" | 
+                  Cbed_rules[,"SSMU"]=="APEI"   )
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##################
+# Midwater fishing
+##################
+##############################################################################################
+RuleName        <- "48M0T"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 48-trawl-SUN-all of Area 48 - based on B01"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "48"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & ( CSBdata[,"Flag_CTY_Code"]== "SUN" | CSBdata[,"Flag_CTY_Code"]== "LVA")
+  #            & CSBdata[,"TFN"]          == 1 | CSBdata[,"TFN"] == 6)
+  #            & CSBdata[,"Split_Year"]   <= 1978  and Latvia in 1993
+              ) # end RuleSubset
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1" & 
+              (     (    Cbed_rules[,"SSMU"]=="APBSE" 
+                       & Cbed_rules[,"Lon"]>-56 
+                       & Cbed_rules[,"Lat"]>-63.3)
+                  | (    Cbed_rules[,"SSMU"]=="APE"   
+                       & Cbed_rules[,"Lon"]>-56
+                       & Cbed_rules[,"Lat"]>-63.3) 
+               ) 
+              |  Cbed_rules[,"SSMU"]=="APDPW" 
+              |  Cbed_rules[,"SSMU"]=="APDPE" 
+              |  Cbed_rules[,"SSMU"]=="APEI"   )
+      |   (Cbed_rules[,"ASD"]=="48.2" & 
+               ( Cbed_rules[,"SSMU"]=="SOW" 
+              |  Cbed_rules[,"SSMU"]=="SONE"))| 
+           Cbed_rules[,"ASD"]=="48.3"
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "48M1T"
+TypeDepthInterval<-9 # row of data frame Depth_intervals - for krill in 481 after 
+
+RuleDescription <- "Subarea 48.1-trawl-  less eastern areas south of latitude of Joinville Island."
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "481"
+               & ( CSBdata[,"GTY_rev"]      == "OTM" | CSBdata[,"GTY_rev"] == "TM" | CSBdata[,"GTY_rev"] == "TMB")
+  #            & CSBdata[,"Flag_CTY_Code"]
+  #            & CSBdata[,"TFN"]         
+  #            & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+# subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
+
+dfR <- Cbed_rules[
+          (Cbed_rules[,"ASD"]=="48.1"  
+             
+             & !(    Cbed_rules[,"SSMU"]=="APE" # Antarctic Peninsula East 
+                       & Cbed_rules[,"Lat"] < -63.3)
+           
+             &!(    Cbed_rules[,"SSMU"]=="APPA" # Antarctic Peninsula Pelagic Area  
+                       & Cbed_rules[,"Lon"] > -57
+                       & Cbed_rules[,"Lat"] < -63.3) 
+               ) 
+          ,]
+ 
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+############################
+# Display results
+############################
+
+print.data.frame(data.frame(Rule = names(CatchDistRules),bind_rows(lapply(CatchDistRules,function(cd){cd$Distribution}))))
+
+CD_Area48<-CatchDistRules
+```
+  
+
 **B01: Area 48 bottom trawl**  
 
 The distribution of catch amongst MEASO areas for this rule is
@@ -762,211 +1131,977 @@ This applied to the following records:
 
     Country, split year, catch
     
-    
-#### Area 58  
+
+
+### Area 58
+
+@RN6645 describes the early fisheries in the Indian Sector as being dominated by finfish fishing in the Subantarctic Zone, primarily around Kerguelen Islands and Ob and Lena Banks.  Krill fishing also occurred in the Antarctic Zone in Prydz Bay.  While some fishing occurred on *Chaenodraco wilsoni* in the Antarctic Zone, which may have occurred in Divisions 58.4.1 and 58.4.2, the main fisheries occurred in the Central Indian Sector.  
   
-B04   Area 58         - trawl    - SUN - finfish - concentrated in subantarctic areas.  no record of working around Prince Edward/Marion  
-B05   Area 58         - trawl    - SUN - mostly finfish from subantarctic (separate chaenodraco from mackerel icefish) but 28000 t krill from antarctic.
-B06   Area 88         - trawl    - POL - check catch is not pelagic.  apply M02
-B07   Division 58.4.1 - longline - check in haul data, also check catch limits according to SSRUs.
-B08   Division 58.4.1 - longline - NZ - would normally fish close to Ross Sea.
-B09   Division 58.4.1 - trawl    - AUS - likely same vessel as 58.4.3 in that year
+Records containing both Antarctic krill and the finfish taxa from the Subantarctic Zone need to be separated between the zones rather than distributing each of the taxa between zones.  These records were duplicated by removing Antarctic krill and other taxa that were from the Antarctic Zone from the main record and then creating a record for the Antarctic Zone taxa.  The distribution rules for each of these adjusted records were to allocate the whole catch to their respective zones.  
+  
+For longline fisheries, Division 58.4.1 is the only ASD area which crosses two sectors.  The longline fishery is wholly within the Antarctic Zone.  Until recently, longline fisheries in this division were constrained to three Small-scale research units - 5841C, 5841E, 5841G.  5841A was open also but comprised only a few seamounts.  Relative proportions of seabed area across these SSRUs in the two sectors is used to divide the catch.  
+  
+  
+```{r CD_Area58, echo=FALSE}
+CatchDistRules<-NULL
+
+############################
+# General distribution rules
+############################
+
+##############################################################################################
+RuleName        <- "58N00_A"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.2 - all fishing - Central Indian Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5842"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58N00_S"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.5 & 58.6 and recent designations - all fishing - Central Indian Subantarctic area"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "585"  
+                 | CSBdata[,"GAR_Code"] == "5851"  
+                 | CSBdata[,"GAR_Code"] == "5852"  
+                 | CSBdata[,"GAR_Code"] == "586"
+                 | CSBdata[,"GAR_Code"] == "5843a"
+                 | CSBdata[,"GAR_Code"] == "5843b"
+                 | CSBdata[,"GAR_Code"] == "5844a"
+                 | CSBdata[,"GAR_Code"] == "5844b"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58N00_N"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.7 - all fishing - Central Indian Northern area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "587"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIN"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 
-#### Area 88
 
+################
+# Bottom fishing
+################
+##############################################################################################
+RuleName        <- "58B0T_S"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 58-trawl-SUN-finfish-concentrated in subantarctic areas. No record of 58.7"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+               & CSBdata[,"TFN"]          == 1
+               & CSBdata[,"Split_Year"]   < 1978
+              ) # end RuleSubset
 
-B10   Subarea 88.1    - longline - check haul data, also check catch limits according to SSRUs/research blocks (remove 88.1A from WPA and place in EIA)
-B11   Subarea 88.1    - trawl    - NZ - likely a research voyage in Ross Sea.
-B12   Subarea 88.2    - longline - check haul data, also check catch limits separating east and west SSRUs (and reports in following year on what was caught in each)
-B13   Subarea 88.3    - longline - Korea - check in haul data, also check catch limits according to SSRUs/research blocks - is there anything in subantarctic.
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
+##############################################################################################
+RuleName        <- "58B0T_Sa"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
 
-### Midwater fisheries
+RuleDescription <- "Area 58-trawl-SUN-subantarctci finfish (inspected data) but with Antarctic krill in 1978 & 1979" # adjust effort
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+               & CSBdata[,"TFN"]          == 1
+               & ( CSBdata[,"Split_Year"]   == 1978 | CSBdata[,"Split_Year"]   == 1979 )
+              ) # end RuleSubset
 
-M01   Area 48         - trawl - SUN/LVA - spread around finfishing grounds of Area 48.
-M02   Subarea 48.1    - krill - by SSMU areas around islands - not including the east AP or the western SSMUs.
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIS"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
-M03   Subarea 58.4    - krill - Korea - are these likely to be predominantly from CIA
-M04   Subarea 58.4    - krill - SUN - are these likely from Prydz Bay
-M05   Division 58.4.1 - krill - relative areas based on depth range - 1000 - 3000 m - check Steve Nicol's descriptions
-M06   Division 58.4.1 - krill - Japan - in EIA as activities in East of division.
-M07   Division 58.4.1 - krill - Japan - in CIA as activities in west of division.
+##############################################################################################
+RuleName        <- "58B41L"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
 
-M08   Area 88         - trawl - mix of krill and silverfish
-M09   Subarea 88.1    - krill - how much was in WPA versus around Balleny Islands in EIA
-M10   Subarea 88.2    - krill - was most fishing in WPA
+RuleDescription <- "Division 58.4.1-longline-sea ice made fishing variable in location across SSRUs" 
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "LLS"
+               & !(CSBdata[,"Flag_CTY_Code"]== "NZL")
+        #       & CSBdata[,"TFN"]          == 6
+        #       & CSBdata[,"Split_Year"]   == 1980
+              ) # end RuleSubset
 
-
-
-From Mike
-I didn't describe the layers used, but the iceshelf is a shapefile from the ADD version 6
-
-
-I've copied it into your home folder, you might be able to download it from there - or just use it in place. 
-https://ace-ecostats.ace-eco-stats.cloud.edu.au/
+dfR <- Cbed_rules[
+          (  Cbed_rules[,"ASD"]=="58.4.1" 
+           & (  Cbed_rules[,"SSRU"]=="5841C" 
+              | Cbed_rules[,"SSRU"]=="5841E"  
+              | Cbed_rules[,"SSRU"]=="5841G"
+              )
+           )
+          ,]
  
-Your user name is "acon" and the pw is that in reverse (please change that type 'passwd' in the Terminal)
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58B41L_EI"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58.4.1-longline-NZ- work close to Ross Sea"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "LLS"
+               & CSBdata[,"Flag_CTY_Code"]== "NZL"
+        #       & CSBdata[,"TFN"]          == 6
+        #       & CSBdata[,"Split_Year"]   == 1980
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("EIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58B41T_CI"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58.4.1-trawl-Aus- south of BANZARE Bank"  
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & !(CSBdata[,"Flag_CTY_Code"]== "AUS")
+        #       & CSBdata[,"TFN"]          == 6
+        #       & CSBdata[,"Split_Year"]   == 1980
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58B43_S"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.3 - all fishing - Central Indian Subantarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5843"  
+               & (CSBdata[,"GTY_rev"]  == "OTB" | CSBdata[,"GTY_rev"]  == "OTM" )     
+               & CSBdata[,"Flag_CTY_Code"] == "AUS"
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+
+##############################################################################################
+RuleName        <- "58B44_S"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.4 - Japan bottom trawling - Central Indian Subantarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5844"  
+               & CSBdata[,"GTY_Code"]  == "OTB"
+               & CSBdata[,"Flag_CTY_Code"] == "JPN"
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58B4T_A"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 58.4-trawl-SUN-icefish from continental shelf"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+               & CSBdata[,"TFN"]          == 1
+               & ( CSBdata[,"Split_Year"]   == 1985 | CSBdata[,"Split_Year"]   == 1987 )
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+
+############################
+# Midwater fishing
+############################
+##############################################################################################
+RuleName        <- "58M0T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 58-trawl-SUN-early years were in subantarctic"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+               & CSBdata[,"TFN"]          == 1
+               & CSBdata[,"Split_Year"]   == 1979
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M0T_CIA"  # for replication of the records to have only krill - remove krill from other records, change GTY_rev to "OTM"
+
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+
+RuleDescription <- "Area 58-trawl-SUN-subantarctci finfish (inspected data) but with Antarctic krill in 1978 & 1979"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+               & CSBdata[,"TFN"]          == 6
+               & ( CSBdata[,"Split_Year"]   == 1978 | CSBdata[,"Split_Year"]   == 1979 )
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M41T"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.1-krill-relative areas-depth:1000-4000m" # Nicol et al 2000 @RN8348
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "JPN"
+               & CSBdata[,"TFN"]          == 6
+               & !( CSBdata[,"Split_Year"]   == 1976 | CSBdata[,"Split_Year"]   == 1982 | CSBdata[,"Split_Year"]   == 1984 )
+             ) # end RuleSubset
+dfR <- Cbed_rules[Cbed_rules[,"ASD"]=="58.4.1"
+                & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA"),]  # need to not include northern banks and seamounts
+  
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M41Ta"
+TypeDepthInterval<-4 # row of data frame Depth_intervals (silverfish)
+RuleDescription <- "Division 58.4.1-trawl-SUN likely near Prydz Bay"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN" 
+               & (CSBdata[,"Split_Year"]==1983 | CSBdata[,"Split_Year"]==1984)
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M41Tb"
+TypeDepthInterval<-6 # row of data frame Depth_intervals (krill)
+RuleDescription <- "Division 58.4.1-trawl-SUN likely near Prydz Bay"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN" 
+               & CSBdata[,"Split_Year"]==1990
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M41T_CI"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.1-krill-Japan-in CIA as activities in west of division."
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "JPN" 
+               & CSBdata[,"Split_Year"]==1976
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M41T_EI"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.1-krill-Japan-in EIA as activities in East of division."
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "JPN" 
+               & (CSBdata[,"Split_Year"]==1982 | CSBdata[,"Split_Year"]==1984)
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("EIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M43_A"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.3 - all fishing - Central Indian Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5843"  
+               & CSBdata[,"GTY_rev"]  == "OTM"
+               & CSBdata[,"Flag_CTY_Code"] == "JPN"
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M44_A"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.4 - krill fishing - Central Indian Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5844"  
+               & CSBdata[,"GTY_Code"]  == "OTM"
+               & CSBdata[,"Flag_CTY_Code"] == "JPN"
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M4T"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 58.4-krill-Korea-unknown so distributed throughout 58.4.1 and 58.4.2"  # as if a single voyage along the coast
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "KOR"
+               & CSBdata[,"TFN"]          == 6
+        #      & CSBdata[,"Split_Year"]   1979-1984
+              ) # end RuleSubset
+
+dfR <- Cbed_rules[(Cbed_rules[,"ASD"]=="58.4.1" | Cbed_rules[,"ASD"]=="58.4.2")
+                & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA"),]  # need to not include northern banks and seamounts
+  
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M4T_A"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 58.4-trawl-France-krill catch"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "FRA"
+               & CSBdata[,"TFN"]          == 6
+               & CSBdata[,"Split_Year"]   == 1980
+              ) # end RuleSubset
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             data.frame(MEASO = c("CIA"),Area=c(1))
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "58M4T_CI"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 58.4-krill-SUN-likely from Prydz Bay"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+        #      & CSBdata[,"TFN"]          1 | 6
+        #      & CSBdata[,"Split_Year"]   1979-1984
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+############################
+# Display results
+############################
+
+
+print.data.frame(data.frame(Rule = names(CatchDistRules),bind_rows(lapply(CatchDistRules,function(cd){cd$Distribution}))))
+
+
+
+CD_Area58<-CatchDistRules
+```
+  
+  
+### Area 88  
+
+Bottom trawling appears in the records for Area 88 infrequently.  In 1978, Poland undertook bottom trawling.  When the records were examined closely and in monthly sequence with Subarea 48.1, it was apparent that, given the small catch, this was likely research in the Bellingshausen Sea extending the west Antarctic Peninsula research fishing into Subarea 88.3.  The other bottom trawling to occur was a trawl survey by NZ in during the Census of Antarctic Marine Life in Subarea 88.1 the Ross Sea.  
+  
+Longline fishing began in Subarea 88.1 in 1997.  In the first two years it was undertaken south of 65oS in the Ross Sea.  In 1999, Small-scale Research Units (SSRUs) were established by CCAMLR (SC-CAMLR, 1999, Table 6).  These were revised over a number of years but Cape Adare was used as one of the dividing lines of these SSRUs.  Until the establishment of the MPA in the Ross Sea in 2016, the management of the longline fishery was via the SSRUs in Subarea 88.1 and SSRUs A and B in Subarea 88.2.  The component of Subarea 88.1 in the East Indian Sector has been closed since the 2005/06 season with it mostly closed prior to that.  For this reason, longline catches in Subarea 88.1 are allocated to the West Pacific Sector in the Antarctic Zone.  
+  
+For Subarea 88.2, longline fishing has been primarily in the eastern margins related to the Amundsen Sea, with catches allowed in SSRUs C-G.  The crossover between the West and East Pacific Sectors occurs in SSRU 882E, which also has the highest allocation of catch among the SSRUs in the Subarea.  Given that access was dependent on variability in the sea ice, the distribution of catches in this subarea was according to the proportions of seabed for longline fishing among SSRUs C-G.  
+  
+For Subarea 88.3, Korea has been undertaking a longline research program since their proposal was submitted to SC-CAMLR in 2015.  It is undertaken in research blocks in the Antarctic Zone of the East Pacific Sector.
+
+  
+```{r CD_Bottom_Area88, echo=FALSE}
+CatchDistRules<-NULL
+
+############################
+# Bottom Fishing
+############################
+##############################################################################################
+RuleName        <- "88B0T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Area 88-trawl-POL-likely in 88.3 as extension of 48.1 research"  # when scrutinised for taxa and monthly sequence
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "88"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & CSBdata[,"Flag_CTY_Code"]== "POL"
+               & CSBdata[,"TFN"]          == 1
+               & CSBdata[,"Split_Year"]   == 1978
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88B1L_WP"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-longline-fishery concentrated south of 65oS and east of Cape Adare."
+
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
+               & ( CSBdata[,"GTY_rev"]    == "LLS" | CSBdata[,"GTY_rev"]=="FPO")
+     #         & CSBdata[,"Flag_CTY_Code"]== "POL"
+     #         & CSBdata[,"TFN"]          == 1
+     #         & CSBdata[,"Split_Year"]   == 1978
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88B1T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-trawl-NZ-CAMLR research survey in Ross Sea"
+
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
+               & CSBdata[,"GTY_rev"]      == "OTB"
+               & CSBdata[,"Flag_CTY_Code"]== "NZL"
+     #        & CSBdata[,"TFN"]          == 1
+     #        & CSBdata[,"Split_Year"]   == 1978
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88B2L"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 8821-longline-sea ice made fishing variable in location across SSRUs" 
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "882"
+               & CSBdata[,"GTY_rev"]      == "LLS"
+     #         & CSBdata[,"Flag_CTY_Code"]== "NZL"
+     #         & CSBdata[,"TFN"]          == 1
+     #         & CSBdata[,"Split_Year"]   == 1978
+              ) # end RuleSubset
+
+dfR <- Cbed_rules[
+          (  Cbed_rules[,"ASD"]=="88.2" 
+           & (  Cbed_rules[,"SSRU"]=="882C" 
+              | Cbed_rules[,"SSRU"]=="882D"  
+              | Cbed_rules[,"SSRU"]=="882E"
+              | Cbed_rules[,"SSRU"]=="882F"
+              | Cbed_rules[,"SSRU"]=="882G"
+              )
+           )
+          ,]
  
- 
-d <- readRDS("~/gebco_cells_2000m.rds")
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
-In your home folder “cells_ssmu_ssru.rds”
+##############################################################################################
+RuleName        <- "88B3_A"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.3 - all fishing - East Pacific Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "883"  
+               & CSBdata[,"GTY_rev"]  == "LLS"      
+               & (CSBdata[,"Flag_CTY_Code"] == "NZL"  | CSBdata[,"Flag_CTY_Code"] == "RUS")
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
 
-
-The grid is 
-
-prj <- "+proj=laea +lat_0=-90 +datum=WGS84"
-template <- raster(extent(-5398000, 5386000, -5260000, 5570000), nrows = 5415, ncols = 5392, 
-   crs = prj)
-
-and with that you can populate the cells indexed from the cell column, e.g. 
-
-r <- template
-## turn the code into an integer
-r[d1$cell] <- as.integer(factor(d1$ssmu))
-plot(r )
-
-
-
- 
-## for eg. sqkm
-library(dplyr)
- 
- d  %>% group_by(subarea) %>% summarize(n() * 2 * 2)
-`summarise()` ungrouping output (override with `.groups` argument)
-# A tibble: 19 x 2
-   subarea `n() * 2 * 2`
-
-
-old code for plotting krill results
-load("CatchGrid")
-cst <- sf::read_sf("Aad_coastline Drawing.shp")
-cst <- sf::st_set_crs(cst, 4326)
-g <- raster::rasterFromXYZ(Res)
-p <- raster::rasterToPolygons(g)
-
-## now sf
-library(sf)
-pp <- sf::st_segmentize(sf::st_as_sf(p), 0.1)  ## segmentize so curvy
-pp <- sf::st_set_crs(pp, 4326)  ## longlat/WGS84
-
-library(ggplot2)
-prj <- "+proj=laea +lon_0=0 +lat_0=-90 +datum=WGS84"
-crs <- sf::st_crs(prj)
-ggplot(st_transform(pp, crs), aes(fill = Catch)) + geom_sf()  + geom_sf(data = cst, aes(fill = NULL)) 
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 
+##############################################################################################
+RuleName        <- "88B3L"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.3-longline-Korea-Research fishing in research blocks- see SC-CAMLR (2015, 2016)"
+
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "883"
+               & CSBdata[,"GTY_rev"]      == "LLS"
+               & CSBdata[,"Flag_CTY_Code"]== "KOR"
+  #            & CSBdata[,"TFN"]          
+  #            & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88B3La"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+
+RuleDescription <- "Subarea 88.3-longline-Chile - WG-FSA-98/20 - South Shetlands extension" # was really pots but sticking with the Bulletin here.
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "883"
+               & CSBdata[,"GTY_rev"]      == "LLS"
+               & CSBdata[,"Flag_CTY_Code"]== "CHL"
+  #            & CSBdata[,"TFN"]          == 3
+  #            & CSBdata[,"Split_Year"]   == 1998
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+############################
+# Midwater Fishing
+############################
+##############################################################################################
+
+RuleName        <- "88M0T"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Area 88-trawl-SUN- assuming western margins of Ross Sea" # based on @RN13714  & @RN13715  
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "88"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+      #        & CSBdata[,"TFN"]          == 1 | 6
+      #        & CSBdata[,"Split_Year"]   1977-1986
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+dfR <- Cbed_rules[(Cbed_rules[,"ASD"]=="88.1" 
+                & ( Cbed_rules[,"SSRU"]=="881D" 
+                  | Cbed_rules[,"SSRU"]=="881E"
+                  | Cbed_rules[,"SSRU"]=="881F"
+                  | Cbed_rules[,"SSRU"]=="881G"
+                  | Cbed_rules[,"SSRU"]=="881H"
+                  | Cbed_rules[,"SSRU"]=="881I"
+                  | Cbed_rules[,"SSRU"]=="881J")),]  # need to not include northern banks and seamounts
+
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
+                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
+                         )) # end distribution rule
+                  ) # end bind
+
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88M1T_EI"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-Trawl-JPN-krill"  # based on SC-III/INF/09
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "JPN"
+      #        & CSBdata[,"TFN"]          ==  6
+      #        & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("EIA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88M1T_WPa"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-trawl survey-NZL- Census of Antarctic Marine Life"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "NZL"
+      #        & CSBdata[,"TFN"]          ==  3
+      #        & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88M1T_WPb"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.1-Trawl-SUN-Krill"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+      #        & CSBdata[,"TFN"]          ==  6
+      #        & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88M2T_WPa"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.2-Trawl-JPN-Krill-Ross Sea"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "882"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "JPN"
+      #        & CSBdata[,"TFN"]          ==  6
+      #        & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88M2T_WPb"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.2-Trawl-SUN-Krill-Ross Sea"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "882"
+               & CSBdata[,"GTY_rev"]      == "OTM"
+               & CSBdata[,"Flag_CTY_Code"]== "SUN"
+      #        & CSBdata[,"TFN"]          ==  6
+      #        & CSBdata[,"Split_Year"]   
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+
+##############################################################################################
+RuleName        <- "88M3_A"
+# TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 88.3 - all fishing - East Pacific Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "883"  
+               & CSBdata[,"GTY_rev"]  == "OTM"      
+    #          & CSBdata[,"Flag_CTY_Code"]
+    #          & CSBdata[,"TFN"] 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CatchDistRules<-c(CatchDistRules
+                 ,list(list(
+                         Subset = RuleSubset
+                        ,Description = RuleDescription
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfRprop
+                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
+                         )) # end distribution rule
+                  ) # end bind
+names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 
-```{r ASD_MEASO_compare, echo=FALSE}
+############################
+# Display results
+############################
 
-# use data from file read into ASD_depth_propInMEASOareas
-
-############################ Methods from Mike
-d <- readRDS("~/gebco_cells_2000m.rds")
- 
-
-library(dplyr)
- 
-## for eg. sqkm
-d  %>% group_by(subarea) %>% summarize(n() * 2 * 2)
-
-#######################################
+print.data.frame(data.frame(Rule = names(CatchDistRules),bind_rows(lapply(CatchDistRules,function(cd){cd$Distribution}))))
 
 
+CD_Area88<-CatchDistRules
 
-Depth_intervals<-unique(ASD_depth_propInMEASOareas[,"DepthRange"])
-
-SplitASD<-apply(ASD_depth_propInMEASOareas[,c(3:16)],1,max)<1
-
-df<-ASD_depth_propInMEASOareas[SplitASD &   # only records that are split across areas, exclude "Outside" rows and columns
-                               ASD_depth_propInMEASOareas[,1]!="Outside",c(1:17)]
-df[,c(3:17)]<-round(df[,c(3:17)],2)
-SplitASD <- unique(df[,1])
+CatchDistRules<-c(CD_Area48,CD_Area58,CD_Area88)
 
 
 ```
 
-```{r,echo=FALSE}
-a<-"48.1"; print.data.frame(df[df[,1]==a,c(1,3:17)],2,row.names = FALSE)
-
-```
-
-
-```{r,echo=FALSE}
-# examine data reported for Areas as a whole
-
-CheckStatAreaAssignments<-FALSE
-if(CheckStatAreaAssignments){
-dfArea<-CSBdata[CSBdata[,"GAR_Code"] %in% c("48","58","88"),]
-  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
-  LevelCombinations<-unique(dfWholeStatArea[,Factors])
-  apply(LevelCombinations,1,fnCatch_summary
-        ,dfWholeStatArea,Factors,BFTaxa,Threshold=10)
-  } # end if
-
-Check58assignments<-FALSE
-if(Check58assignments){
-dfWholeStatArea<-CSBdata[CSBdata[,"GAR_Code"] %in% c("584","585"),]
-  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
-  LevelCombinations<-unique(dfWholeStatArea[,Factors])
-  apply(LevelCombinations,1,fnCatch_summary
-        ,dfWholeStatArea,Factors,BFTaxa,Threshold=10)
-  } # end if
-
-CheckGeneralAssignments<-FALSE
-if(CheckGeneralAssignments){
-  Factors<-c("Split_Year","Flag_CTY_Code","GTY_Code","TFN","GAR_Code")
-  LevelCombinations<-unique(CSBdata[,Factors])
-  apply(LevelCombinations,1,fnCatch_summary
-        ,CSBdata,Factors,BFTaxa,Threshold=10)
-  } # end if
   
-
-```
-
-
-
-
-## Aggregating data into MEASO areas
-## Assessment of fisheries for MEASO
-
-Method: Data for a fishery is extracted from the Bulletin and catches summed with the following factors: Year, Nation, Taxon. For each fishery, summaries are provided on:
-
-
-
-*Groundfish*
-
-
-```{r Fishery_Groundfish, echo=FALSE}
-
-# taxonomic groups for reporting given catch thresholds
-
-
-
+ 
   
-```
-
   
-
-
-
-
-
-The aim is to use combinations of gear, country, and taxa to isolate bottom fishing from pelagic fishing
-
-
-ggplot(dat, 
-       aes(Order, Value)) +
-  geom_col(aes(fill = ID),
-           position = position_dodge2(width = 0.5, preserve = "single")) +
-  facet_grid(. ~ Day) +
-  scale_x_continuous(
-    breaks = dat$Order,
-    labels = dat$ID)
-    
-
-
 # References    
 .     
