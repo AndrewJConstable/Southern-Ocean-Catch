@@ -33,7 +33,8 @@ WorkDir<-('C:\\_w\\_d\\Catch\\')
 # Output flags
 
 printMaps<-FALSE
-
+plotCatchMaps <- TRUE
+plotToothfish<-TRUE
 
 ############# data files needed to support analyses #######################
 
@@ -128,6 +129,10 @@ Depth_intervals<-data.frame("DepthRange" = c("Groundfish","Icefish","Toothfish",
                            ,"Minimum"    = c(-100,-100, -600,-100,  -3000,  -1000,  -600,-100,-300)
                            ,"Maximum"    = c(-600,-700,-1800,-500,-10000,-4000,-10000,-800,-1000)
                             )# end data frame
+if(plotToothfish){
+  Depth_intervals[,"Minimum"]<-rep(-550,nrow(Depth_intervals))
+  Depth_intervals[,"Maximum"]<-rep(-1800,nrow(Depth_intervals))
+} # end if plot
 
 MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
                     ,"AOS","Atlantic Ocean","Subantarctic","48"
@@ -147,6 +152,27 @@ MEASOareas<-matrix(c("AOA","Atlantic Ocean","Antarctic","48"
                     ,"Outside","not in MEASO area","",""),byrow=TRUE,ncol=4)
 dimnames(MEASOareas)[[2]]<-c("Code","Sector","Zone","CSB_Stat_Area")
 
+ASDareas<-matrix(c(  "48.1","481","Antarctic Peninsula"
+                    ,"48.2","482","South Orkney Islands"
+                    ,"48.3","483","South Georgia Island"
+                    ,"48.4","484","South Sandwich Islands"
+                    ,"48.5","485","Weddell Sea"
+                    ,"48.6","486","Dronning-Maud, Bouvey"
+                    ,"58.4.1","5841","East Indian"
+                    ,"58.4.2","5842","Western Indian"
+                    ,"58.4.3a","5843a","Elan Bank"
+                    ,"58.4.3b","5843b","BANZARE Bank"
+                    ,"58.4.4","5844","Ob & Lena Banks"
+                    ,"58.5.1","5851","Kerguelen Islands"
+                    ,"58.5.2","5852","Heard Island and McDonald Islands"
+                    ,"58.6","586","Crozet Island"
+                    ,"58.7","587","Prince Edward and Marion Islands"
+                    ,"88.1","881","Western Ross Sea"
+                    ,"88.2","882","Eastern Ross Sea, Amundsen Sea"
+                    ,"88.3","883","Bellingshausen Sea"
+                    ,"Outside","Outside","not in ASD area"
+                    ),byrow=TRUE,ncol=3)
+dimnames(ASDareas)[[2]]<-c("Code","CodeAlt","Name")
 
 
 decade<-seq(1960,2010,10)
@@ -203,6 +229,7 @@ fnDepthArea<-function(dInt          # which depth interval
 # subset data from depth range
     x<- Cb_dat[(Cb_dat[,"Depth"] <   dfDepths[dInt,"Minimum"] & 
                 Cb_dat[,"Depth"] >=  dfDepths[dInt,"Maximum"]),]
+if(nrow(x)>0){
   if(length(Groups)>0) {
            GroupBy<-lapply(Groups,function(grp,x1){return(x1[,grp])},x)
            res <- aggregate(x[,"Area"],GroupBy,sum)
@@ -215,7 +242,12 @@ fnDepthArea<-function(dInt          # which depth interval
            sumx<-data.frame(DepthRange = dfDepths[dInt,"DepthRange"], Area = sum(x[,"Area"]))
            return(sumx) 
        } # end else
+} else {
+  return(NULL)
+}
      } # end fnDepthArea
+
+
 
 
 ```
@@ -304,7 +336,6 @@ CSBdata<-cbind(CSBdata,CC_Season,Split_Year)
 # modify records to enable use of rules to assign catches to MEASO areas
 
 # NOTE - IF RECORDS ARE MODIFIED TO CHANGE GROUP - MAKE CHANGES IN "B-M Step1.CSV" OR "B-M Step2.CSV" AS REQUIRED 
-#        ALSO ADD RECORDS APPROPRIATE FOR ASSIGNING RULES TO DISTRIBUTE CATCHES
 
 ########
 # Case 1: SUN catch in Area 58 in years 1978, 1979.  Has Antarctic krill and Subantarctic fish species. Reassign krill to 
@@ -320,7 +351,6 @@ CSBdata[dfSelect,"Target_TXN_Code"] <- "KRI"  # for krill fishery
 # Added records to "B-M Step2.csv"  :  
 #            OT  SUN  6  58  1978  M
 #            OT  SUN  6  58  1979  M
-
 
 ```
 
@@ -586,6 +616,10 @@ GTY_rev<-CSBdata[,"GTY_Code"]
 GTY_rev[GTY_rev=="OT"]<-unlist(lapply(CSBdata[GTY_rev=="OT","Location"],function(g){paste("OT",g,sep="")}))
 CSBdata<-cbind(CSBdata,GTY_rev)
 
+remove("dfTmp1")
+remove("dfTmp2")
+remove("GTY_rev")
+
 ```
 
 
@@ -601,6 +635,7 @@ res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
 res1<-rbind(res1,GTzeros)
 res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Gear"]),sum))
 dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
+remove("res1")
 
 # exclude data
 GTY_exclude<- GT_Names[match(c("TX","TBB","OT"),GT_Names[,"Gear"]),"GTn"]     
@@ -652,6 +687,7 @@ A revised GTY code is added to the main data frame along with an assignment of a
                          LevelCombinations<-unique(dfSUN[,Factors])
                          apply(LevelCombinations,1,fnCatch_summary
                                ,dfSUN,Factors,BFTaxa,Threshold=2)
+                         remove("dfSUN")
                          } # end if
 
 CheckStatAreaAssignments<-FALSE
@@ -661,6 +697,7 @@ dfcombo<-CSBdata[,] # CSBdata[,"GAR_Code"] %in% c("48","58","88")
   LevelCombinations<-unique(dfcombo[,Factors])
   apply(LevelCombinations,1,fnCatch_summary
         ,dfcombo,Factors,BFTaxa,Threshold=10)
+  remove("dfCombo")
   } # end if
 
 
@@ -747,17 +784,9 @@ dfcombo<-CSBdata[CSBdata[,"Catch_TXN_Code"] %in% c("WIC"),]
   LevelCombinations<-unique(dfcombo[,Factors])
   apply(LevelCombinations,1,fnCatch_summary
         ,dfcombo,Factors,BFTaxa,Threshold=10)
-  } # end if
+ remove("dfcombo")
+    } # end if
 
-
-CheckStatAreaAssignments<-FALSE
-if(CheckStatAreaAssignments){
-dfArea<-CSBdata[CSBdata[,"GAR_Code"] %in% c("48","58","88"),]
-  Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
-  LevelCombinations<-unique(dfWholeStatArea[,Factors])
-  apply(LevelCombinations,1,fnCatch_summary
-        ,dfWholeStatArea,Factors,BFTaxa,Threshold=10)
-  } # end if
 
 
 ```
@@ -779,38 +808,68 @@ Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
 # rename variables to be consistent with code
 dimnames(Seabed_areas)[[2]]<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","SSRU","SSMU","Area")
 
-Cbed_rules<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]) & !is.na(Seabed_areas[,"ASD"]) & !is.na(Seabed_areas[,"MEASO"]),c("Lon","Lat","Depth","MEASO","ASD","SSMU","SSRU","Area")]
+Cbed_rules<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]) & !is.na(Seabed_areas[,"ASD"]) 
+                         & !is.na(Seabed_areas[,"MEASO"]),c("Cell","Lon","Lat","Depth","MEASO","ASD","SSMU","SSRU","Area")]
 Cbed_rules[is.na(Cbed_rules[,"SSRU"]),"SSRU"]<-"NA"
 Cbed_rules[is.na(Cbed_rules[,"SSMU"]),"SSMU"]<-"NA"
 
+remove(Seabed_areas)  # free up memory
 
-fnPropInMareaForRule<-function(cbed_a,M_areas,FixedProp=FALSE){   # if FixedProp then the areas in cbed_a are proportions
-     res<-rep(0,length(M_areas))
-     if(FixedProp) x<-cbed_a[,"Area"] else x<-cbed_a[,"Area"]/sum(cbed_a[,"Area"])
-     res[match(cbed_a[,"MEASO"],M_areas)]<-round(x,3)
-     names(res)<-M_areas
-     return(res)
+fnPropInMareaForRule<-function(cbed_a            # data frame - with Grouping variables,"Depth","Area".
+                                                 # Grouping variables will be either or both "MEASO", "ASD"
+                              ,MEASO             # MEASO area names in order
+                              ,ASD               # ASD names in order
+                              ){ # start function    
+  
+  # find grouping variables
+  Groups<-dimnames(cbed_a)[[2]] 
+  Groups<-Groups[which(Groups %in% c("MEASO","ASD"))]
+
+  if(nrow(cbed_a)>0) cbed_a[,"Area"] <- cbed_a[,"Area"]/sum(cbed_a[,"Area"]) else
+                     cbed_a<-NULL
+
+  if(length(Groups)==2){
+          dASD<-unique(cbed_a[,"ASD"])
+          res<-bind_rows(lapply(seq(1,length(dASD),1)
+                        ,function(a,df,asd,measo){
+                            r<-as.data.frame(matrix(0,ncol=length(measo),nrow=1
+                                              ,dimnames=list(asd[a],measo)))
+                            if(!is.null(df)) {
+                                 r[,match(df[df[,"ASD"]==asd[a],"MEASO"],measo)]<-
+                                             round(df[df[,"ASD"]==asd[a],"Area"],3)
+                            } # end if                       
+                            return(r)
+                          },cbed_a,dASD,MEASO))
+          ASDzero<-ASD[-match(dimnames(res)[[1]],ASD)]
+          resZero<-as.data.frame(matrix(0,ncol=length(MEASO),
+                       nrow=length(ASDzero),dimnames=list(ASDzero,MEASO)))
+          res<-bind_rows(res,resZero)
+          res<-res[order(dimnames(res)[[1]]),]
+  } else {
+    if(Groups[1]=="MEASO"){
+          res<-as.data.frame(matrix(0,ncol=length(MEASO)
+                                    ,nrow=1,dimnames=list(NULL,MEASO)))
+        if(!is.null(df)) {
+          res[1,match(cbed_a[,"MEASO"],MEASO)]<-round(cbed_a[,"Area"],3)
+        } # end if
+    } else {
+    if(Groups[1]=="ASD"){
+          res<-as.data.frame(matrix(0,ncol=1,nrow=length(ASD),dimnames=list(ASD,"Prop")))
+        if(!is.null(df)) {
+          res[match(cbed_a[,"ASD"],ASD),1]<-round(cbed_a[,"Area"],3)
+        } # end if
+    } else stop("neither MEASO or ASD present in data") 
+      } # end else MEASO
+  } #end else groups==2
+  
+     return(res) # data frame with ASD rows and MEASO columns (eached named accordingly)
      } # end fnPropInMarea
+
 
 ```
 
-## Area 48
-
-Old Text
-
-Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
+## Area 48  
   
-In Subarea 48.1, @RN6645 shows the trawl fisheries concentrated on the shelf to the north west of the South Shetland Islands, and to the northeast of Joinville Island.  The fishing grounds around the SSI are approximated by the CCAMLR Small-scale Management Units (SSMUs) of Drake Passage West, Drake Passage East, and Elephant Island.  The grounds around Joinville Island are in the eastern margins of two SSMUs - Bransfield Strait East and Antarctic Peninsula East.  The fishing grounds were approximated to be in the area to the north and east of Joinville Island within these SSMUs and bounded to the west by the meridian 56oW and to the south by the latitude 63.3S.  
-  
-In Subarea 48.2, @RN6645 shows the trawl fisheries were in areas corresponding to two SSMUs - South Orkney West and South Orkney North East.  
-  
-In Subarea 48.3, the trawl fisheries explored all available sea bed within the depth range.  
-  
-Without other corroborating information, these seabed areas were used to distribute the catch amongst MEASO areas when there was no other information to better locate the catch.  
-
-
-
-----
 Early bottom fisheries in this area spread across Subareas 48.1, 48.2 and 48.3.  For the most part, trawl fisheries were identified to be concentrated from 100-600 m in depth.  Longline fisheries occur in 600m to 1800m in depth.  
   
 While not ideal, catches aggregated at the level of Statistical Area were assigned to subareas according to the proportions of trawlable seabed area across Subareas 48.1, 48.2 and 48.3 [@RN6645].  
@@ -830,65 +889,728 @@ Krill fishing in the 1970s occurred in Areas 48 and 58.  During this period, the
 Distribution of midwater catches between MEASO areas was only ambiguous for Subarea 48.1.  Given the expansion of interest in krill fishing, catches were distributed between the East Pacific Antarctic area from the Atlantic Antarctic area according to the distribution of the depth strata.
 
 While krill fisheries concentrated near to South Georgia.  Myctophid fisheries were attempted in the northern part of Subarea 48.3, the area of which was surveyed in the late 1980s [@RN4306].  Both these fisheries occur in the Subantarctic Zone.
-
-
+  
   
 ```{r CD_Area48, echo=FALSE}
 CatchDistRules<-NULL
+
+fnCatchDistRule<-function(Rname,Rsubset,Rdescription,typeDI,DI,CBa,CbedSubset,Agroups,MEASO,ASD,DepthAdjust){
+  
+   dfAreas<-fnDepthArea(typeDI,DI,CBa[CbedSubset,c(Agroups,"Depth","Area")])
+   
+  if(is.null(dfAreas)) {
+
+            CDR<- list(list( Rule    = Rname
+                        ,Subset      = Rsubset
+                        ,Description = Rdescription
+                        ,Area_km2    = 0
+                        ,CbedAreaSubset = NULL
+                        ,Distribution = NULL
+                         )) # end distribution rule
+
+     } else {
+
+        CDR<- list(list( Rule   = Rname
+                        ,Subset = Rsubset
+                        ,Description = Rdescription
+                        ,Area_km2 = sum(dfAreas[,"Area"])
+                        ,CbedAreaSubset = CbedSubset
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfAreas
+                                            ,MEASO
+                                            ,ASD
+                                            )
+                         )) # end distribution rule
+         } # end else
+   
+      names(CDR)<-RuleName
+   return(CDR)
+} # end function
 
 ############################
 # General distribution rules
 ############################
 ##############################################################################################
-RuleName        <- "48N00_A"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Subarea 48.2- all fishing - Atlantic Antarctic area"
-RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "482"  
-                 | CSBdata[,"GAR_Code"] == "484"  
-                 | CSBdata[,"GAR_Code"] == "485"  
-                 | CSBdata[,"GAR_Code"] == "486"
-                 )
+RuleName        <- "48B2T_1"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.2- groundfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "482"  
     #          & CSBdata[,"GTY_rev"]      
     #          & CSBdata[,"Flag_CTY_Code"]
-    #          & CSBdata[,"TFN"] 
+               & CSBdata[,"TFN"]==1 
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("AOA"),Area=c(1))
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.2" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 
 ##############################################################################################
-RuleName        <- "48N00_S"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Subarea 48.3- all fishing - Atlantic Subantarctic area"
-RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+RuleName        <- "48M2T_2"
+TypeDepthInterval<-2 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.2- krill - Atlantic Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "482"  
     #          & CSBdata[,"GTY_rev"]      
     #          & CSBdata[,"Flag_CTY_Code"]
-    #          & CSBdata[,"TFN"] 
+               & CSBdata[,"TFN"]==2 
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("AOS"),Area=c(1))
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.2" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L2_3"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.2- krill - Atlantic Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "482"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==3 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.2" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M2T_k"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.2- krill - Atlantic Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "482"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==6 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.2" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L2_c"
+TypeDepthInterval<-8 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.2- crabs - Atlantic Antarctic area"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "482"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==8 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.2" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L4"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.4- toothfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "484"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==3 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.4" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M4"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.4- krill"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "484"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==6 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.4" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M5"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.5- krill"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "485"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==6 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.5" 
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L5"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.5- toothfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "485"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==3 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.5" 
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L6"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.6- toothfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "486"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==3 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.6" 
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+
+##############################################################################################
+RuleName        <- "48M6"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.6- krill"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "486"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==6 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.6"
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M6_S"
+TypeDepthInterval<-5 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.6- silverfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "486"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==5 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.6"
+                   & Cbed_rules[,"MEASO"]=="AOA"
+                   & Cbed_rules[,"Lat"] < -60
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48B3T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- groundfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"] == 1 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & Cbed_rules[,"MEASO"]=="AOS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M3T_k"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- krill"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==6 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & (Cbed_rules[,"SSMU"]=="SGE" | Cbed_rules[,"SSMU"]=="SGW" )
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M3T_m"
+TypeDepthInterval<-5 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- myctophids"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==5 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & Cbed_rules[,"MEASO"]=="AOS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48B3T_i"
+TypeDepthInterval<-2 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- icefish"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==2 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & Cbed_rules[,"MEASO"]=="AOS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48M3T_sq"
+TypeDepthInterval<-7 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- squid"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==7 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & Cbed_rules[,"MEASO"]=="AOS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L3C"
+TypeDepthInterval<-8 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- crabs"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==8 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & Cbed_rules[,"MEASO"]=="AOS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "48L3T"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subarea 48.3- toothfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"]     == "483"
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==3 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="48.3" 
+                   & Cbed_rules[,"MEASO"]=="AOS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ################
@@ -908,8 +1630,8 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "48"
 
 # subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
 
-dfR <- Cbed_rules[
-          (Cbed_rules[,"ASD"]=="48.1" & 
+CbedAreaSubset <- 
+          (((Cbed_rules[,"ASD"]=="48.1" & 
               (     (    Cbed_rules[,"SSMU"]=="APBSE" 
                        & Cbed_rules[,"Lon"]>-56 
                        & Cbed_rules[,"Lat"]>-63.3)
@@ -920,22 +1642,32 @@ dfR <- Cbed_rules[
               |  Cbed_rules[,"SSMU"]=="APDPW" 
               |  Cbed_rules[,"SSMU"]=="APDPE" 
               |  Cbed_rules[,"SSMU"]=="APEI"   )
-      |   (Cbed_rules[,"ASD"]=="48.2" & 
+          | (Cbed_rules[,"ASD"]=="48.2" & 
                ( Cbed_rules[,"SSMU"]=="SOW" 
-              |  Cbed_rules[,"SSMU"]=="SONE"))| 
-           Cbed_rules[,"ASD"]=="48.3"
-          ,]
+              |  Cbed_rules[,"SSMU"]=="SONE"))
+          | Cbed_rules[,"ASD"]=="48.3")
  
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
+ 
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "48B1L"
@@ -951,24 +1683,30 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "481"
 
 # subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
 
-dfR <- Cbed_rules[
-           Cbed_rules[,"ASD"]=="48.1" & 
+CbedAreaSubset <- 
+           ((Cbed_rules[,"ASD"]=="48.1" & 
               (  Cbed_rules[,"SSMU"]=="APDPW" 
               |  Cbed_rules[,"SSMU"]=="APDPE" 
-              |  Cbed_rules[,"SSMU"]=="APEI"   )
-          ,]
- 
+              |  Cbed_rules[,"SSMU"]=="APEI"   ))
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
+
+AreaGroups<-c("MEASO")  # add ASD if need both
 
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ##############################################################################################
@@ -985,25 +1723,33 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "481"
 
 # subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
 
-dfR <- Cbed_rules[
-          (Cbed_rules[,"ASD"]=="48.1" & 
+CbedAreaSubset <- 
+          ((Cbed_rules[,"ASD"]=="48.1" & 
                   ( (Cbed_rules[,"SSMU"]=="APBSE" & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) |
                     (Cbed_rules[,"SSMU"]=="APE"   & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) ) | 
                   Cbed_rules[,"SSMU"]=="APDPW" | 
                   Cbed_rules[,"SSMU"]=="APDPE" | 
                   Cbed_rules[,"SSMU"]=="APEI"   )
-          ,]
- 
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##################
 # Midwater fishing
@@ -1022,8 +1768,8 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "48"
 
 # subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
 
-dfR <- Cbed_rules[
-          (Cbed_rules[,"ASD"]=="48.1" & 
+CbedAreaSubset <- 
+          (((Cbed_rules[,"ASD"]=="48.1" & 
               (     (    Cbed_rules[,"SSMU"]=="APBSE" 
                        & Cbed_rules[,"Lon"]>-56 
                        & Cbed_rules[,"Lat"]>-63.3)
@@ -1037,19 +1783,28 @@ dfR <- Cbed_rules[
       |   (Cbed_rules[,"ASD"]=="48.2" & 
                ( Cbed_rules[,"SSMU"]=="SOW" 
               |  Cbed_rules[,"SSMU"]=="SONE"))| 
-           Cbed_rules[,"ASD"]=="48.3"
-          ,]
- 
+           Cbed_rules[,"ASD"]=="48.3")
+
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "48M1T"
@@ -1065,8 +1820,8 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "481"
 
 # subset data to include only Subareas 48.1, 48.2 and 48.3 and relevant SSMUs
 
-dfR <- Cbed_rules[
-          (Cbed_rules[,"ASD"]=="48.1"  
+CbedAreaSubset <- 
+          ((Cbed_rules[,"ASD"]=="48.1"  
              
              & !(    Cbed_rules[,"SSMU"]=="APE" # Antarctic Peninsula East 
                        & Cbed_rules[,"Lat"] < -63.3)
@@ -1075,18 +1830,26 @@ dfR <- Cbed_rules[
                        & Cbed_rules[,"Lon"] > -57
                        & Cbed_rules[,"Lat"] < -63.3) 
                ) 
-          ,]
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
  
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ############################
@@ -1150,82 +1913,549 @@ CatchDistRules<-NULL
 ############################
 
 ##############################################################################################
-RuleName        <- "58N00_A"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Division 58.4.2 - all fishing - Central Indian Antarctic area"
+RuleName        <- "58B42T_G"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.2 - groundfish"
 RuleSubset <- (  CSBdata[,"GAR_Code"] == "5842"  
     #          & CSBdata[,"GTY_rev"]      
     #          & CSBdata[,"Flag_CTY_Code"]
-    #          & CSBdata[,"TFN"] 
+               & CSBdata[,"TFN"]==1 
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="58.4.2" 
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
-RuleName        <- "58N00_S"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Subareas 58.5 & 58.6 and recent designations - all fishing - Central Indian Subantarctic area"
+RuleName        <- "58B42T_I"
+TypeDepthInterval<-2 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.2 - icefish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5842"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==2 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="58.4.2" 
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58L42"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.2 - toothfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5842"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==3 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="58.4.2" 
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58M42_S"
+TypeDepthInterval<-4 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.2 - silverfish"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5842"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==4 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="58.4.2" 
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58M42_K"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.2 - krill"
+RuleSubset <- (  CSBdata[,"GAR_Code"] == "5842"  
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+               & CSBdata[,"TFN"]==6 
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- (Cbed_rules[,"ASD"]=="58.4.2" 
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58B5T_G"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.5 -groundfish"
 RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "585"  
                  | CSBdata[,"GAR_Code"] == "5851"  
                  | CSBdata[,"GAR_Code"] == "5852"  
-                 | CSBdata[,"GAR_Code"] == "586"
-                 | CSBdata[,"GAR_Code"] == "5843a"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 1
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58B5T_I"
+TypeDepthInterval<-2 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.5 -icefish"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "585"  
+                 | CSBdata[,"GAR_Code"] == "5851"  
+                 | CSBdata[,"GAR_Code"] == "5852"  
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 2
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58L5_T"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.5 -toothfish"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "585"  
+                 | CSBdata[,"GAR_Code"] == "5851"  
+                 | CSBdata[,"GAR_Code"] == "5852"  
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 3
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58L6"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.6 -toothfish"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "586"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 3
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.6" )
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58B6T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.6 -groundfish"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "586"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 1
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.6" )
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58L43_T"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.4.3 -toothfish"
+RuleSubset <- (  ( CSBdata[,"GAR_Code"] == "5843a"
                  | CSBdata[,"GAR_Code"] == "5843b"
-                 | CSBdata[,"GAR_Code"] == "5844a"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 3
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.4.3a" | Cbed_rules[,"ASD"]=="58.4.3b" )
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58B44T"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.4.4 -groundfish"
+RuleSubset <- (  (CSBdata[,"GAR_Code"] == "5844a"
                  | CSBdata[,"GAR_Code"] == "5844b"
                  )
     #          & CSBdata[,"GTY_rev"]      
     #          & CSBdata[,"Flag_CTY_Code"]
-    #          & CSBdata[,"TFN"] 
+              & CSBdata[,"TFN"] == 1
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
-CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.4.4")
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
 
-##############################################################################################
-RuleName        <- "58N00_N"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Subareas 58.7 - all fishing - Central Indian Northern area"
-RuleSubset <- (  CSBdata[,"GAR_Code"] == "587"  
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+######################## the problem #############################################
+RuleName        <- "58M44T"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.4.4 -krill"
+RuleSubset <- (  (CSBdata[,"GAR_Code"] == "5844a"
+                 | CSBdata[,"GAR_Code"] == "5844b"
+                 )
     #          & CSBdata[,"GTY_rev"]      
     #          & CSBdata[,"Flag_CTY_Code"]
-    #          & CSBdata[,"TFN"] 
+              & CSBdata[,"TFN"] == 6
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIN"),Area=c(1))
-CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.4.4")
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
 
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58L44_T"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.4.4 -toothfish"
+RuleSubset <- (  (CSBdata[,"GAR_Code"] == "5844a"
+                 | CSBdata[,"GAR_Code"] == "5844b"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 3
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.4.4")
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
+
+##############################################################################################
+RuleName        <- "58L7_T"
+TypeDepthInterval<-3 # row of data frame Depth_intervals
+RuleDescription <- "Subareas 58.7 -toothfish"
+RuleSubset <- (  (CSBdata[,"GAR_Code"] == "587"
+                 | CSBdata[,"GAR_Code"] == "587"
+                 )
+    #          & CSBdata[,"GTY_rev"]      
+    #          & CSBdata[,"Flag_CTY_Code"]
+              & CSBdata[,"TFN"] == 3
+    #          & CSBdata[,"Split_Year"] 
+              ) # end RuleSubset
+
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.7")
+                   & Cbed_rules[,"MEASO"]=="CIN"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ################
@@ -1242,17 +2472,38 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
                & CSBdata[,"Split_Year"]   < 1978
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CbedAreaSubset <-  (
+                     (  Cbed_rules[,"ASD"]=="58.4.1"
+                      | Cbed_rules[,"ASD"]=="58.4.2"
+                      | Cbed_rules[,"ASD"]=="58.4.3a"
+                      | Cbed_rules[,"ASD"]=="58.4.3b"
+                      | Cbed_rules[,"ASD"]=="58.4.4"
+                      | Cbed_rules[,"ASD"]=="58.5.1"
+                      | Cbed_rules[,"ASD"]=="58.5.2"
+                      | Cbed_rules[,"ASD"]=="58.6"
+                       )
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58B0T_Sa"
@@ -1266,16 +2517,38 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
                & ( CSBdata[,"Split_Year"]   == 1978 | CSBdata[,"Split_Year"]   == 1979 )
               ) # end RuleSubset
 
+CbedAreaSubset <-  (
+                     (  Cbed_rules[,"ASD"]=="58.4.1"
+                      | Cbed_rules[,"ASD"]=="58.4.2"
+                      | Cbed_rules[,"ASD"]=="58.4.3a"
+                      | Cbed_rules[,"ASD"]=="58.4.3b"
+                      | Cbed_rules[,"ASD"]=="58.4.4"
+                      | Cbed_rules[,"ASD"]=="58.5.1"
+                      | Cbed_rules[,"ASD"]=="58.5.2"
+                      | Cbed_rules[,"ASD"]=="58.6"
+                       )
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIS"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58B41L"
@@ -1289,25 +2562,34 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
         #       & CSBdata[,"Split_Year"]   == 1980
               ) # end RuleSubset
 
-dfR <- Cbed_rules[
-          (  Cbed_rules[,"ASD"]=="58.4.1" 
+CbedAreaSubset <- 
+          ((  Cbed_rules[,"ASD"]=="58.4.1" 
            & (  Cbed_rules[,"SSRU"]=="5841C" 
               | Cbed_rules[,"SSRU"]=="5841E"  
               | Cbed_rules[,"SSRU"]=="5841G"
               )
            )
-          ,]
- 
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58B41L_EI"
@@ -1321,16 +2603,36 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
         #       & CSBdata[,"Split_Year"]   == 1980
               ) # end RuleSubset
 
+CbedAreaSubset <-  
+          (  ( Cbed_rules[,"ASD"]=="58.4.1" 
+              &(  Cbed_rules[,"SSRU"]=="5841C" 
+                 | Cbed_rules[,"SSRU"]=="5841E"  
+                 | Cbed_rules[,"SSRU"]=="5841G"
+                )
+              ) 
+           & Cbed_rules[,"MEASO"]=="EIA"
+           & (Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+              & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+             ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("EIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58B41T_CI"
@@ -1339,26 +2641,40 @@ TypeDepthInterval<-1 # row of data frame Depth_intervals
 RuleDescription <- "Area 58.4.1-trawl-Aus- south of BANZARE Bank"  
 RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
                & CSBdata[,"GTY_rev"]      == "OTB"
-               & !(CSBdata[,"Flag_CTY_Code"]== "AUS")
+               & CSBdata[,"Flag_CTY_Code"]== "AUS"
         #       & CSBdata[,"TFN"]          == 6
         #       & CSBdata[,"Split_Year"]   == 1980
               ) # end RuleSubset
 
+CbedAreaSubset <-  
+          (((  Cbed_rules[,"ASD"]=="58.4.1" 
+           ) & Cbed_rules[,"MEASO"]=="CIS")
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58B43_S"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Division 58.4.3 - all fishing - Central Indian Subantarctic area"
+TypeDepthInterval<-1 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.3 - AUS trawl"
 RuleSubset <- (  CSBdata[,"GAR_Code"] == "5843"  
                & (CSBdata[,"GTY_rev"]  == "OTB" | CSBdata[,"GTY_rev"]  == "OTM" )     
                & CSBdata[,"Flag_CTY_Code"] == "AUS"
@@ -1366,42 +2682,67 @@ RuleSubset <- (  CSBdata[,"GAR_Code"] == "5843"
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
-CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+CbedAreaSubset <-  
+          (((  Cbed_rules[,"ASD"]=="58.4.3a" | Cbed_rules[,"ASD"]=="58.4.3b"
+           ) & Cbed_rules[,"MEASO"]=="CIS")
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
 
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+CatchDistRules<-c(CatchDistRules
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ##############################################################################################
 RuleName        <- "58B44_S"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
+TypeDepthInterval<-1 # row of data frame Depth_intervals
 RuleDescription <- "Division 58.4.4 - Japan bottom trawling - Central Indian Subantarctic area"
 RuleSubset <- (  CSBdata[,"GAR_Code"] == "5844"  
                & CSBdata[,"GTY_Code"]  == "OTB"
                & CSBdata[,"Flag_CTY_Code"] == "JPN"
-    #          & CSBdata[,"TFN"] 
+   #            & CSBdata[,"TFN"]  == 1
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+
+CbedAreaSubset <-  
+          (((  Cbed_rules[,"ASD"]=="58.4.4"
+           ) & Cbed_rules[,"MEASO"]=="CIS")
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58B4T_A"
@@ -1415,16 +2756,30 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
                & ( CSBdata[,"Split_Year"]   == 1985 | CSBdata[,"Split_Year"]   == 1987 )
               ) # end RuleSubset
 
+
+CbedAreaSubset <-  
+          (((  Cbed_rules[,"ASD"]=="58.4.4"
+           ) & Cbed_rules[,"MEASO"]=="CIS")
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ############################
@@ -1441,17 +2796,38 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
                & CSBdata[,"Split_Year"]   == 1979
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
+CbedAreaSubset <-  (
+                     (  Cbed_rules[,"ASD"]=="58.4.1"
+                      | Cbed_rules[,"ASD"]=="58.4.2"
+                      | Cbed_rules[,"ASD"]=="58.4.3a"
+                      | Cbed_rules[,"ASD"]=="58.4.3b"
+                      | Cbed_rules[,"ASD"]=="58.4.4"
+                      | Cbed_rules[,"ASD"]=="58.5.1"
+                      | Cbed_rules[,"ASD"]=="58.5.2"
+                      | Cbed_rules[,"ASD"]=="58.6"
+                       )
+                   & Cbed_rules[,"MEASO"]=="CIS"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M0T_CIA"  # for replication of the records to have only krill - remove krill from other records, change GTY_rev to "OTM"
@@ -1466,16 +2842,38 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "58"
                & ( CSBdata[,"Split_Year"]   == 1978 | CSBdata[,"Split_Year"]   == 1979 )
               ) # end RuleSubset
 
+CbedAreaSubset <-  (
+                     (  Cbed_rules[,"ASD"]=="58.4.1"
+                      | Cbed_rules[,"ASD"]=="58.4.2"
+                      | Cbed_rules[,"ASD"]=="58.4.3a"
+                      | Cbed_rules[,"ASD"]=="58.4.3b"
+                      | Cbed_rules[,"ASD"]=="58.4.4"
+                      | Cbed_rules[,"ASD"]=="58.5.1"
+                      | Cbed_rules[,"ASD"]=="58.5.2"
+                      | Cbed_rules[,"ASD"]=="58.6"
+                       )
+                   & Cbed_rules[,"MEASO"]=="CIA"
+                   & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                       & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M41T"
@@ -1483,23 +2881,34 @@ TypeDepthInterval<-6 # row of data frame Depth_intervals
 RuleDescription <- "Division 58.4.1-krill-relative areas-depth:1000-4000m" # Nicol et al 2000 @RN8348
 RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
                & CSBdata[,"GTY_rev"]      == "OTM"
-               & CSBdata[,"Flag_CTY_Code"]== "JPN"
+               & (CSBdata[,"Flag_CTY_Code"]== "JPN" | CSBdata[,"Flag_CTY_Code"]== "CHN")
                & CSBdata[,"TFN"]          == 6
                & !( CSBdata[,"Split_Year"]   == 1976 | CSBdata[,"Split_Year"]   == 1982 | CSBdata[,"Split_Year"]   == 1984 )
              ) # end RuleSubset
-dfR <- Cbed_rules[Cbed_rules[,"ASD"]=="58.4.1"
-                & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA"),]  # need to not include northern banks and seamounts
-  
+
+CbedAreaSubset <-(Cbed_rules[,"ASD"]=="58.4.1"
+                & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M41Ta"
@@ -1511,16 +2920,30 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
                & (CSBdata[,"Split_Year"]==1983 | CSBdata[,"Split_Year"]==1984)
               ) # end RuleSubset
 
+
+CbedAreaSubset <-(Cbed_rules[,"ASD"]=="58.4.1"
+                & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M41Tb"
@@ -1532,16 +2955,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
                & CSBdata[,"Split_Year"]==1990
               ) # end RuleSubset
 
+CbedAreaSubset <-(Cbed_rules[,"ASD"]=="58.4.1"
+                & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M41T_CI"
@@ -1553,16 +2989,30 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
                & CSBdata[,"Split_Year"]==1976
               ) # end RuleSubset
 
+
+CbedAreaSubset <-(Cbed_rules[,"ASD"]=="58.4.1"
+                & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M41T_EI"
@@ -1574,21 +3024,34 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "5841"
                & (CSBdata[,"Split_Year"]==1982 | CSBdata[,"Split_Year"]==1984)
               ) # end RuleSubset
 
+CbedAreaSubset <-(Cbed_rules[,"ASD"]=="58.4.1"
+                & (Cbed_rules[,"MEASO"]=="EIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("EIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M43_A"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
-RuleDescription <- "Division 58.4.3 - all fishing - Central Indian Antarctic area"
+TypeDepthInterval<-6 # row of data frame Depth_intervals
+RuleDescription <- "Division 58.4.3 - krill - Central Indian Antarctic area"
 RuleSubset <- (  CSBdata[,"GAR_Code"] == "5843"  
                & CSBdata[,"GTY_rev"]  == "OTM"
                & CSBdata[,"Flag_CTY_Code"] == "JPN"
@@ -1596,17 +3059,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"] == "5843"
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CbedAreaSubset <-((Cbed_rules[,"ASD"]=="58.4.3a" | Cbed_rules[,"ASD"]=="58.4.3b")
+                & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M44_A"
@@ -1619,17 +3094,30 @@ RuleSubset <- (  CSBdata[,"GAR_Code"] == "5844"
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CbedAreaSubset <-((Cbed_rules[,"ASD"]=="58.4.4")
+                & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M4T"
@@ -1642,19 +3130,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
         #      & CSBdata[,"Split_Year"]   1979-1984
               ) # end RuleSubset
 
-dfR <- Cbed_rules[(Cbed_rules[,"ASD"]=="58.4.1" | Cbed_rules[,"ASD"]=="58.4.2")
-                & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA"),]  # need to not include northern banks and seamounts
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="58.4.1" | Cbed_rules[,"ASD"]=="58.4.2")
+                & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA")  # need to not include northern banks and seamounts
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
   
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M4T_A"
@@ -1668,16 +3166,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
                & CSBdata[,"Split_Year"]   == 1980
               ) # end RuleSubset
 
+CbedAreaSubset <-((Cbed_rules[,"ASD"]=="58.4.4")
+                & (Cbed_rules[,"MEASO"]=="CIS")  
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             data.frame(MEASO = c("CIA"),Area=c(1))
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "58M4T_CI"
@@ -1690,17 +3201,36 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "584"
         #      & CSBdata[,"Split_Year"]   1979-1984
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIA"),Area=c(1))
+CbedAreaSubset <-(
+                     (  Cbed_rules[,"ASD"]=="58.4.1"
+                      | Cbed_rules[,"ASD"]=="58.4.2"
+                      | Cbed_rules[,"ASD"]=="58.4.3a"
+                      | Cbed_rules[,"ASD"]=="58.4.3b"
+                      | Cbed_rules[,"ASD"]=="58.4.4"
+                       )
+                & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ############################
 # Display results
@@ -1734,7 +3264,7 @@ CatchDistRules<-NULL
 ############################
 ##############################################################################################
 RuleName        <- "88B0T"
-TypeDepthInterval<-1 # row of data frame Depth_intervals
+TypeDepthInterval<-1  # row of data frame Depth_intervals
 RuleDescription <- "Area 88-trawl-POL-likely in 88.3 as extension of 48.1 research"  # when scrutinised for taxa and monthly sequence
 RuleSubset <- (  CSBdata[,"GAR_Code"]     == "88"
                & CSBdata[,"GTY_rev"]      == "OTB"
@@ -1743,17 +3273,30 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "88"
                & CSBdata[,"Split_Year"]   == 1978
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CbedAreaSubset <-(
+                 Cbed_rules[,"ASD"]=="88.3"
+                & (Cbed_rules[,"MEASO"]=="EPA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88B1L_WP"
@@ -1767,17 +3310,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
      #         & CSBdata[,"Split_Year"]   == 1978
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.1"
+                & (Cbed_rules[,"MEASO"]=="WPA")  # need to not include northern banks and seamounts
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88B1T"
@@ -1791,17 +3346,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
      #        & CSBdata[,"Split_Year"]   == 1978
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.1"
+                & (Cbed_rules[,"MEASO"]=="WPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88B2L"
@@ -1815,7 +3382,7 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "882"
      #         & CSBdata[,"Split_Year"]   == 1978
               ) # end RuleSubset
 
-dfR <- Cbed_rules[
+CbedAreaSubset <- 
           (  Cbed_rules[,"ASD"]=="88.2" 
            & (  Cbed_rules[,"SSRU"]=="882C" 
               | Cbed_rules[,"SSRU"]=="882D"  
@@ -1823,23 +3390,33 @@ dfR <- Cbed_rules[
               | Cbed_rules[,"SSRU"]=="882F"
               | Cbed_rules[,"SSRU"]=="882G"
               )
-           )
-          ,]
+            & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
  
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88B3_A"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
+TypeDepthInterval<-3 # row of data frame Depth_intervals
 RuleDescription <- "Subarea 88.3 - all fishing - East Pacific Antarctic area"
 RuleSubset <- (  CSBdata[,"GAR_Code"] == "883"  
                & CSBdata[,"GTY_rev"]  == "LLS"      
@@ -1848,17 +3425,28 @@ RuleSubset <- (  CSBdata[,"GAR_Code"] == "883"
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.3"
+                & (Cbed_rules[,"MEASO"]=="EPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ##############################################################################################
@@ -1873,17 +3461,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "883"
   #            & CSBdata[,"Split_Year"]   
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.3"
+                & (Cbed_rules[,"MEASO"]=="EPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88B3La"
@@ -1897,17 +3497,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "883"
   #            & CSBdata[,"Split_Year"]   == 1998
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.3"
+                & (Cbed_rules[,"MEASO"]=="EPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ############################
 # Midwater Fishing
@@ -1924,31 +3536,38 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "88"
       #        & CSBdata[,"Split_Year"]   1977-1986
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("CIS"),Area=c(1))
-dfR <- Cbed_rules[(Cbed_rules[,"ASD"]=="88.1" 
+CbedAreaSubset <- ((Cbed_rules[,"ASD"]=="88.1" 
                 & ( Cbed_rules[,"SSRU"]=="881D" 
                   | Cbed_rules[,"SSRU"]=="881E"
                   | Cbed_rules[,"SSRU"]=="881F"
                   | Cbed_rules[,"SSRU"]=="881G"
                   | Cbed_rules[,"SSRU"]=="881H"
                   | Cbed_rules[,"SSRU"]=="881I"
-                  | Cbed_rules[,"SSRU"]=="881J")),]  # need to not include northern banks and seamounts
+                  | Cbed_rules[,"SSRU"]=="881J"))  # need to not include northern banks and seamounts
+       & ( Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+           & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"]))
+
+AreaGroups<-c("MEASO")  # add ASD if need both
 
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             fnDepthArea(TypeDepthInterval,Depth_intervals,dfR[,c("MEASO","Depth","Area")])
-                                            ,MEASOareas[,"Code"],FixedProp=FALSE)
-                         )) # end distribution rule
-                  ) # end bind
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
 
 ##############################################################################################
 RuleName        <- "88M1T_EI"
-TypeDepthInterval<-1 # row of data frame Depth_intervals
+TypeDepthInterval<-6 # row of data frame Depth_intervals
 RuleDescription <- "Subarea 88.1-Trawl-JPN-krill"  # based on SC-III/INF/09
 RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
                & CSBdata[,"GTY_rev"]      == "OTM"
@@ -1957,21 +3576,33 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
       #        & CSBdata[,"Split_Year"]   
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("EIA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.1"
+                & (Cbed_rules[,"MEASO"]=="EIA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88M1T_WPa"
-TypeDepthInterval<-3 # row of data frame Depth_intervals
+TypeDepthInterval<-1 # row of data frame Depth_intervals
 RuleDescription <- "Subarea 88.1-trawl survey-NZL- Census of Antarctic Marine Life"
 RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
                & CSBdata[,"GTY_rev"]      == "OTM"
@@ -1980,17 +3611,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
       #        & CSBdata[,"Split_Year"]   
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.1"
+                & (Cbed_rules[,"MEASO"]=="WPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88M1T_WPb"
@@ -2004,16 +3647,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "881"
               ) # end RuleSubset
 
 dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.1"
+                & (Cbed_rules[,"MEASO"]=="WPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88M2T_WPa"
@@ -2026,17 +3682,29 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "882"
       #        & CSBdata[,"Split_Year"]   
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.2"
+                & (Cbed_rules[,"MEASO"]=="WPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88M2T_WPb"
@@ -2049,21 +3717,33 @@ RuleSubset <- (  CSBdata[,"GAR_Code"]     == "882"
       #        & CSBdata[,"Split_Year"]   
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("WPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.2"
+                & (Cbed_rules[,"MEASO"]=="WPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
+
 
 ##############################################################################################
 RuleName        <- "88M3_A"
-# TypeDepthInterval<-1 # row of data frame Depth_intervals
+TypeDepthInterval<-9 # row of data frame Depth_intervals
 RuleDescription <- "Subarea 88.3 - all fishing - East Pacific Antarctic area"
 RuleSubset <- (  CSBdata[,"GAR_Code"] == "883"  
                & CSBdata[,"GTY_rev"]  == "OTM"      
@@ -2072,17 +3752,28 @@ RuleSubset <- (  CSBdata[,"GAR_Code"] == "883"
     #          & CSBdata[,"Split_Year"] 
               ) # end RuleSubset
 
-dfRprop <- data.frame(MEASO = c("EPA"),Area=c(1))
+CbedAreaSubset <-( Cbed_rules[,"ASD"]=="88.3"
+                & (Cbed_rules[,"MEASO"]=="EPA") 
+                & (   Cbed_rules[,"Depth"] <  Depth_intervals[TypeDepthInterval,"Minimum"]
+                    & Cbed_rules[,"Depth"] >= Depth_intervals[TypeDepthInterval,"Maximum"])
+                   ) # end subset
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
 CatchDistRules<-c(CatchDistRules
-                 ,list(list(
-                         Subset = RuleSubset
-                        ,Description = RuleDescription
-                        ,Distribution = fnPropInMareaForRule(
-                                             dfRprop
-                                            ,MEASOareas[,"Code"],FixedProp=TRUE)
-                         )) # end distribution rule
-                  ) # end bind
-names(CatchDistRules)[length(CatchDistRules)]<-RuleName
+                 ,fnCatchDistRule(RuleName
+                                 ,RuleSubset
+                                 ,RuleDescription
+                                 ,TypeDepthInterval
+                                 ,Depth_intervals
+                                 ,Cbed_rules
+                                 ,CbedAreaSubset
+                                 ,AreaGroups
+                                 ,MEASOareas[,"Code"]
+                                 ,ASDareas[,"Code"]
+                                 ,DepthAdjust
+                                 )
+                  )# end concatenate
 
 
 ############################
@@ -2098,8 +3789,83 @@ CatchDistRules<-c(CD_Area48,CD_Area58,CD_Area88)
 
 
 ```
+### Working
 
-  
+```{r CD_work, echo=FALSE}
+
+####################################################
+# check all records are accounted for
+
+fnDistributeCatch<-function(c,CD,dCSB){
+           subCSB<-dCSB[CD[[c]]$Subset,]
+           res<-bind_rows(lapply(subCSB[,"Green_Weight"],function(gw,subD){gw*subD},CD[[c]]$Distribution))
+           rule<-as.data.frame(matrix(CD[[c]]$Rule,ncol=1,nrow=nrow(subCSB),dimnames=list(NULL,"Rule")))
+           return(bind_cols(subCSB,rule,res))
+           }
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+print(nrow(Res))
+print(nrow(CSBdata))
+
+
+####################################################
+
+# determine catch
+
+CatchTaxa<-c("TOT","TOP","TOA")
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+                 subCSB<-dCSB[CD[[c]]$Subset,]
+                 sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+                 },CatchDistRules,CSBdata,CatchTaxa))
+
+Pixels    <- rep(0,nrow(Cbed_rules))     # generate vector of zeros for N pixels
+RuleZeroArea<-NULL
+for(c in seq(1,length(CatchDistRules),1)){ # too memory intensive to do lapply
+   if(CatchDistRules[[c]]$Area_km2!=0){
+        Density   <- CatchByRules[c]/CatchDistRules[[c]]$Area_km2        # density per km2
+        # place value in each relevant pixel according to CbedAreaSubset multiplying by Cbed[,"Area"]
+        Pixels[CatchDistRules[[c]]$CbedAreaSubset] <- 
+                            Pixels[CatchDistRules[[c]]$CbedAreaSubset] + 
+                            Density * 
+                            Cbed_rules[CatchDistRules[[c]]$CbedAreaSubset,"Area"]  
+   } else {
+     RuleZeroArea<-c(RuleZeroArea,c.CatchByRules[c])
+   }
+        } # end loop c
+
+cat(cat("Total catch in CSB for ("),cat(CatchTaxa,sep=", "),cat(": ", sum(CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])),"\n",sep="")
+
+cat("Catch allocated to pixels: ",sum(Pixels),"\n",sep="")
+cat("Rules with zero area and catch not allocated\n")
+print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+
+
+
+#The grid is 
+library(raster)
+library(rgdal)
+
+prj <- "+proj=laea +lat_0=-90 +datum=WGS84"
+template <- raster(extent(-5398000, 5386000, -5260000, 5570000), nrows = 5415, ncols = 5392, 
+   crs = prj)
+
+#and with that you can populate the cells indexed from the cell column, e.g. 
+PixelsLog10<- Pixels
+PixelsLog10[PixelsLog10==0]<-NA
+r <- template
+## turn the code into an integer
+r[Cbed_rules$Cell] <- log10(PixelsLog10)
+plot(r )
+
+
+
+(CSBdata[CSBdata[,"Catch_TXN_Code"]==""])
+tmp1<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),"TFN"]
+tmp2<-unique(CSBdata[CSBdata[,"TFN"]==6 | CSBdata[,"TFN"]==5,c("GAR_Code","GTY_Code","GTY_rev","Catch_TXN_Code","Split_Year")])
+ print(tmp2[order(tmp2[,"GAR_Code"],tmp2[,"GTY_rev"],tmp2[,"Catch_TXN_Code"],tmp2[,"Split_Year"]),])      
+```  
  
   
   
