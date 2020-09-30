@@ -20,6 +20,7 @@ library(ggplot2)
 library(scales)
 library(png) # for grabbing dimensions of png files
 library(dplyr)
+library(measoshapes)
 
 
 WorkDir<-('C:\\_w\\_d\\Catch\\')
@@ -817,16 +818,13 @@ remove(Seabed_areas)  # free up memory
 
 fnPropInMareaForRule<-function(cbed_a            # data frame - with Grouping variables,"Depth","Area".
                                                  # Grouping variables will be either or both "MEASO", "ASD"
-                              ,MEASO             # MEASO area names in order
-                              ,ASD               # ASD names in order
-                              ){ # start function    
-  
-  # find grouping variables
-  Groups<-dimnames(cbed_a)[[2]] 
-  Groups<-Groups[which(Groups %in% c("MEASO","ASD"))]
 
-  if(nrow(cbed_a)>0) cbed_a[,"Area"] <- cbed_a[,"Area"]/sum(cbed_a[,"Area"]) else
-                     cbed_a<-NULL
+                               ,Groups           # which of MEASO and ASD to use
+                               ,MEASO             # MEASO area names in order
+                               ,ASD               # ASD names in order
+                               ){ # start function    
+  
+  if(!is.null(cbed_a)) cbed_a[,"Area"] <- cbed_a[,"Area"]/sum(cbed_a[,"Area"])
 
   if(length(Groups)==2){
           dASD<-unique(cbed_a[,"ASD"])
@@ -849,13 +847,13 @@ fnPropInMareaForRule<-function(cbed_a            # data frame - with Grouping va
     if(Groups[1]=="MEASO"){
           res<-as.data.frame(matrix(0,ncol=length(MEASO)
                                     ,nrow=1,dimnames=list(NULL,MEASO)))
-        if(!is.null(df)) {
+        if(!is.null(cbed_a)) {
           res[1,match(cbed_a[,"MEASO"],MEASO)]<-round(cbed_a[,"Area"],3)
         } # end if
     } else {
     if(Groups[1]=="ASD"){
           res<-as.data.frame(matrix(0,ncol=1,nrow=length(ASD),dimnames=list(ASD,"Prop")))
-        if(!is.null(df)) {
+        if(!is.null(cbed_a)) {
           res[match(cbed_a[,"ASD"],ASD),1]<-round(cbed_a[,"Area"],3)
         } # end if
     } else stop("neither MEASO or ASD present in data") 
@@ -904,8 +902,13 @@ fnCatchDistRule<-function(Rname,Rsubset,Rdescription,typeDI,DI,CBa,CbedSubset,Ag
                         ,Subset      = Rsubset
                         ,Description = Rdescription
                         ,Area_km2    = 0
-                        ,CbedAreaSubset = NULL
-                        ,Distribution = NULL
+                        ,CbedAreaSubset = CbedSubset
+                        ,Distribution = fnPropInMareaForRule(
+                                             dfAreas
+                                            ,Agroups
+                                            ,MEASO
+                                            ,ASD
+                                            )
                          )) # end distribution rule
 
      } else {
@@ -917,6 +920,7 @@ fnCatchDistRule<-function(Rname,Rsubset,Rdescription,typeDI,DI,CBa,CbedSubset,Ag
                         ,CbedAreaSubset = CbedSubset
                         ,Distribution = fnPropInMareaForRule(
                                              dfAreas
+                                            ,Agroups
                                             ,MEASO
                                             ,ASD
                                             )
@@ -3239,7 +3243,7 @@ CatchDistRules<-c(CatchDistRules
 
 print.data.frame(data.frame(Rule = names(CatchDistRules),bind_rows(lapply(CatchDistRules,function(cd){cd$Distribution}))))
 
-
+# lapply(CatchDistRules,function(cd){print(cd$Distribution)})
 
 CD_Area58<-CatchDistRules
 ```
@@ -3831,22 +3835,24 @@ for(c in seq(1,length(CatchDistRules),1)){ # too memory intensive to do lapply
                             Density * 
                             Cbed_rules[CatchDistRules[[c]]$CbedAreaSubset,"Area"]  
    } else {
-     RuleZeroArea<-c(RuleZeroArea,c.CatchByRules[c])
+     RuleZeroArea<-c(RuleZeroArea,c,CatchByRules[c])
    }
         } # end loop c
 
-cat(cat("Total catch in CSB for ("),cat(CatchTaxa,sep=", "),cat(": ", sum(CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])),"\n",sep="")
+cat(cat("Total catch in CSB for ("),cat(CatchTaxa,sep=", "),cat(": ", sum(CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),"Green_Weight"])),"\n",sep="")
 
 cat("Catch allocated to pixels: ",sum(Pixels),"\n",sep="")
 cat("Rules with zero area and catch not allocated\n")
 print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
 
-
+# finished with rules
+remove(CatchDistRules)
 
 #The grid is 
 library(raster)
 library(rgdal)
-
+library(maptools)
+library(sp)
 prj <- "+proj=laea +lat_0=-90 +datum=WGS84"
 template <- raster(extent(-5398000, 5386000, -5260000, 5570000), nrows = 5415, ncols = 5392, 
    crs = prj)
@@ -3857,8 +3863,85 @@ PixelsLog10[PixelsLog10==0]<-NA
 r <- template
 ## turn the code into an integer
 r[Cbed_rules$Cell] <- log10(PixelsLog10)
-plot(r )
 
+# reduce resolution for plotting
+
+r_small<-aggregate(r, fact=4)
+
+
+#remotes::install_github("AustralianAntarcticDivision/measoshapes")
+library(measoshapes) # from GitHub 
+library(dplyr)
+library(sf)
+library(RColorBrewer)
+
+shapeCRS<-"+proj=longlat +datum=WGS84 +no_defs"
+shapeCoast <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Antarctic coastline", layer="Aad_coastline Drawing",p4s=shapeCRS)
+shapeCoast <- sp::spTransform(shapeCoast, CRS(prj))
+
+shapeIslands <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/subantarctic_islands", layer="gshhs_f_30-60s")
+shapeIslands <- sp::spTransform(shapeIslands, CRS(prj))
+
+
+measo <- measo_regions05 %>% group_by(name) %>% summarize() %>% 
+  inner_join(measo_names)
+# remove temperate areas
+measo<-measo[-which(tmp1$name %in% c("AOT","CIT","EIT","WPT","EPT")),]
+
+
+rgg<-as.data.frame(r_small,xy=2)
+
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("yellow","green","seagreen","navyblue")) # from brewer
+Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
+Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
+Cn   <- 4*(Cmax-Cmin)
+rCols<-col_pal(Cn)
+rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
+
+
+p<-ggplot(measo) 
+p<-p + geom_sf(colour = "red", fill=NA, size=0.5) #, aes(fill=NULL)
+p<-p+scale_fill_identity()
+#p<-p+  theme(
+#    panel.background = element_rect(fill = "transparent"), # bg of the panel
+#    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+#  )
+p<-p+labs(x = NULL, y =NULL,title="Toothfish catch density (tonnes per square km)")
+p<-p+geom_raster(data=rgg,mapping=aes(x,y,fill=rColour),na.rm=TRUE)
+p<-p+ geom_sf(data = shapeCoast) # , aes(fill = NULL)
+#p<-p+ geom_sf(data = shapeIslands)#, aes(fill = NULL)
+p
+
+library(SOmap)
+ticks<-seq(-6,0,1)
+SOmap(graticules=TRUE,graticules_col="grey50",trim=-40)
+plot(measo,col=NA,border="red",add=TRUE)
+plot(r_small,col=rCols,legend=FALSE, add=TRUE)
+SOleg(r_small, position = "topright", col = rCols
+      , ticks = length(ticks),
+      tlabs = as.character(ticks),breaks=ticks,
+      trim = -35, label = "log10 (t/km2)", type = "continuous")
+
+```
+
+##### old code
+shapeCRS<-"+proj=longlat +datum=WGS84 +no_defs"
+shapeCoast <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Antarctic coastline", layer="Aad_coastline Drawing",p4s=shapeCRS)
+shapeCoast <- sp::spTransform(shapeCoast, CRS(prj))
+
+shapeIslands <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/subantarctic_islands", layer="gshhs_f_30-60s")
+shapeIslands <- sp::spTransform(shapeIslands, CRS(prj))
+shapeMEASO <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Measo_areas_shapefiles",layer="Measo_areas_shapefiles",p4s=shapeCRS)
+shapeMEASO <- sp::spTransform(shapeMEASO, CRS(prj))
+
+plot(r )
+plot(shapeIslands,col="black", lwd=0.5, add=TRUE)
+plot(shapeCoast,col="black", lwd=0.5, add=TRUE)
+plot(shapeMEASO,border="red", add=TRUE)
+
+
+plot(shapeCoast,col="black")
 
 
 (CSBdata[CSBdata[,"Catch_TXN_Code"]==""])

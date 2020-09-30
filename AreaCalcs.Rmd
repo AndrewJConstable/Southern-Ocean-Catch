@@ -16,7 +16,7 @@ library(ggplot2)
 library(scales)
 library(png) # for grabbing dimensions of png files
 library(dplyr)
-
+library(measoshapes)
 
 # Editing and Development Notes:
 #
