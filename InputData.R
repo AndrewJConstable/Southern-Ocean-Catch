@@ -89,7 +89,7 @@ BFTaxa<-cbind(BFTaxa,Taxon_Name)
 ############## for distribution of catches amongst MEASO areas ##################################
 
 Depth_intervals<-data.frame("DepthRange" = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs","Krill481")
-                            ,"Minimum"    = c(-100,-100, -600,-100,  -3000,  -1000,  -600,-100,-300)
+                            ,"Minimum"    = c(-100,-100, -600,-100,  -1000,  -1000,  -600,-100,-300)
                             ,"Maximum"    = c(-600,-700,-1800,-500,-10000,-4000,-10000,-800,-1000)
 )# end data frame
 MEASOareas<-as.data.frame(matrix(c(

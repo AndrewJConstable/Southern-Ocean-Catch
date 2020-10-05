@@ -3,7 +3,7 @@ title: "MEASO fishery statistics"
 author: "Andrew Constable"
 date: "16/09/2020"
 output: 
-  bookdown::html_document2:
+  bookdown::pdf_document2:
     toc: true
     toc_depth: 4
     fig_caption: yes
@@ -45,7 +45,7 @@ source("InputData.R")
 
 # Output flags
 
-printMaps<-FALSE
+printMaps<-TRUE
 plotCatchMaps <- TRUE
 plotToothfish<-TRUE
 
@@ -970,11 +970,11 @@ kable(BFTaxa,format="simple",align="l",row.names=NA,caption="Assignment of taxa 
 
 CatchTaxa<-c("TOT","TOP","TOA")
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
 
 # to ensure toothfish catch is assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-DI<-Depth_intervals
   DI[c(5,6,7),"Minimum"]<- -100
   DI[c(5,6,7),"Maximum"]<- -600
   
@@ -1048,8 +1048,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -1076,9 +1080,10 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the Toothfish group for reporting catch")
 ```
 
 ```{r plotSOmap_toothfish,echo=FALSE,fig.cap="Total catch of toothfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
@@ -1257,11 +1262,12 @@ p
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(1,2,10,15,16)),"Code"]
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
 
 # to ensure groundfish catch are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-DI<-Depth_intervals
   DI[c(5,6,7),"Minimum"]<- -100
   DI[c(5,6,7),"Maximum"]<- -600
   
@@ -1336,8 +1342,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -1364,9 +1374,10 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the groundfish group for reporting catch")
 ```
 
 ```{r plotSOmap_groundfish,echo=FALSE,fig.cap="Total catch of groundfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
@@ -1545,11 +1556,12 @@ p
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(6)),"Code"]
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
 
 # to ensure catches are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-DI<-Depth_intervals
   DI[c(5,6,7),"Minimum"]<- -1000
   DI[c(5,6,7),"Maximum"]<- -2000
   
@@ -1624,8 +1636,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -1652,9 +1668,10 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the grenadier group for reporting catch")
 ```
 
 ```{r plotSOmap_grenadier,echo=FALSE,fig.cap="Total catch of grenadier from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
@@ -1696,7 +1713,7 @@ SOleg(r_small, position = "topright", col = rCols
 ```
 
 
-```{r plotTimeSeries_toothfish, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for grenadier in each of the MEASO areas."}
+```{r plotTimeSeries_grenadier, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for grenadier in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
 
@@ -1832,11 +1849,12 @@ p
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(7)),"Code"]
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
 
 # to ensure catches are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-DI<-Depth_intervals
   DI[c(5,6,7),"Minimum"]<- -1000
   DI[c(5,6,7),"Maximum"]<- -2000
   
@@ -1911,8 +1929,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -1939,9 +1961,10 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the skates group for reporting catch")
 ```
 
 ```{r plotSOmap_skates,echo=FALSE,fig.cap="Total catch of skates from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
@@ -2047,7 +2070,7 @@ p
 
 ```
 
-```{r plotWorld_skates, echo=FALSE, fig.cap="Total catches (,000 tonnes) of skates and rays over the historical period for each Flag State."}
+```{r plotWorld_skates, echo=FALSE, eval=FALSE, fig.cap="Total catches (,000 tonnes) of skates and rays over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
 
 # Countries WGS84 from ArcGIS Hub
@@ -2119,11 +2142,11 @@ p
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(3,9)),"Code"]
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
 
 # to ensure icefish catches are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-DI<-Depth_intervals
   DI[c(5,6,7),"Minimum"]<- -100
   DI[c(5,6,7),"Maximum"]<- -700
   
@@ -2131,7 +2154,7 @@ DI<-Depth_intervals
   
   removeLastYear<-TRUE
 includeZeroCatch<-TRUE
-plotYlog<-FALSE
+plotYlog<-TRUE
 YtickMajor<-5000
 YtickMinor<-1000
 YtickMinorN<-YtickMajor/YtickMinor-1
@@ -2198,8 +2221,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -2226,8 +2253,8 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
-
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
 kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 ```
 
@@ -2407,12 +2434,15 @@ p
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(12,14)),"Code"]
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+
 
 # for time series plots
   
   removeLastYear<-TRUE
 includeZeroCatch<-TRUE
-plotYlog<-FALSE
+plotYlog<-TRUE
 YtickMajor<-5000
 YtickMinor<-1000
 YtickMinorN<-YtickMajor/YtickMinor-1
@@ -2482,8 +2512,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -2510,9 +2544,10 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the mesopelagic group for reporting catch")
 ```
 
 ```{r plotSOmap_mesopelagic,echo=FALSE,fig.cap="Total catch of toothfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
@@ -2690,12 +2725,14 @@ p
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(13)),"Code"]
 
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
 
 # for time series plots
   
   removeLastYear<-TRUE
 includeZeroCatch<-TRUE
-plotYlog<-FALSE
+plotYlog<-TRUE
 YtickMajor<-5000
 YtickMinor<-1000
 YtickMinorN<-YtickMajor/YtickMinor-1
@@ -2762,8 +2799,12 @@ cat(cat("Total catch in Bulletin for ("),cat(CatchTaxa,sep=", "),cat("): ", sum(
 
 Resolution<-4 # km2
 cat("Catch allocated to pixels: ",sum(Pixels)*Resolution,"\n",sep="") 
+if(!is.null(RuleZeroArea)){
 cat("Rules with zero area and catch not allocated\n")
-print.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch"))))
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Catch")))))
+} else {
+ cat("No areas had rules with zero area, and catch not allocated\n\n") 
+}
 
 #prepare catch/pixel for plotting
 PixelsLog10<- Pixels
@@ -2790,9 +2831,10 @@ rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 
 ```{r,echo=FALSE}
-dfTaxa<-BFTaxa[match(CatchTaxa,BFTaxa[,"Code"]),c("Code","Taxon_Name")]
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the Krill group for reporting catch")
 ```
 
 ```{r plotSOmap_Krill,echo=FALSE,fig.cap="Total catch of toothfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
