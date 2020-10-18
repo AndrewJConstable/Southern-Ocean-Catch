@@ -3,40 +3,44 @@
 
 # files from CCAMLR Statistical Bulletin 2019
 
-CSBdata           <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryCatch.csv',sep="")
+CSBdata           <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/AggregatedFisheryCatch.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CEdata            <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\AggregatedFisheryEffort.csv',sep="")
+CEdata            <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/AggregatedFisheryEffort.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRcountry         <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataCountry.csv',sep="")
+CRcountry         <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataCountry.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRfishingActivity <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingActivity.csv',sep="")
+CRfishingActivity <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataFishingActivity.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRfishingGear     <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataFishingGear.csv',sep="")
+CRfishingGear     <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataFishingGear.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRgeographicArea  <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataGeographicArea_to_MEASO.csv',sep="")
+CRgeographicArea  <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataGeographicArea_to_MEASO.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataVesselSize.csv',sep="")
+CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataVesselSize.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files\\ReferenceDataTaxon_MEASO.csv',sep="")
+CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataTaxon_MEASO.csv',sep="")
                               , header = TRUE, sep = ",", dec = ".")
 
 # files with results from manual assignment of records to location of fishing gears - bottom (B) or midwater (M)
-resultsDir<-"C:/_w/_r/Southern-Ocean-Catch/"
-data_Location_B_M_Step_1<-read.csv2(paste(resultsDir,'B-M Step1.csv',sep="")
+
+data_Location_B_M_Step_1<-read.csv2('B-M Step1.csv'
                                     , header = TRUE, sep = ",", dec = ".")
-data_Location_B_M_Step_2<-read.csv2(paste(resultsDir,'B-M Step2.csv',sep="")
+data_Location_B_M_Step_2<-read.csv2('B-M Step2.csv'
                                     , header = TRUE, sep = ",", dec = ".")
 
+# file with Toothfish IUU catch from CCAMLR Fishery Reports
+Toothfish_IUU     <-read.csv2('/Users/andreworca/Desktop/_wAAD/_d/Catch/CCAMLR Fishery Reports Toothfish IUU Catch.csv'
+                              , header = TRUE, sep = ",", dec = ".")
+
 # for distribution of catches among MEASO areas
-Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
+Seabed_file<-"/Users/andreworca/Desktop/_wAAD/_d/seabed GEBCO/GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
 
 
 ################# input data to support analyses #################
 
 
-TF_Names<-data.frame(TFn     = c(           1,        2,          3,           4,           5,      6,      7,      8)
-                     ,Fishery = c("Groundfish","Icefish","Toothfish","Silverfish","Myctophids","Krill","Squid","Crabs")
-                     ,Colour  = c("darkslategray","grey80","bisque3","lightsteelblue1","thistle3","coral2","cadetblue4","salmon4"))
+TF_Names<-data.frame(TFn     = c(           1,        2,          3,               4,           5,           6,      7,      8,      9)
+                     ,Fishery = c("Groundfish","Icefish","Toothfish","Toothfish IUU","Silverfish","Myctophids","Krill","Squid","Crabs")
+                     ,Colour  = c("darkslategray","grey80","bisque3","bisque4","lightsteelblue1","thistle3","coral2","cadetblue4","salmon4"))
 
 GT_Names<-data.frame(GTn      = c(   1,    2,    3,    4,   5,   6,    7,    8,   9,   10,  11)
                      ,Gear     = c("TX", "OT","OTB","TBB","OTM","TMB","TM","LLS","FPO","JIG","SX")
@@ -158,4 +162,5 @@ measo_shapes <- measo_regions05 %>% group_by(name) %>% summarize() %>%
 # remove temperate areas
 measo_shapes<-measo_shapes[-which(
   measo_shapes$name %in% c("AOT","CIT","EIT","WPT","EPT")),]
+
 

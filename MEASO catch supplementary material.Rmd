@@ -3,11 +3,11 @@ title: "MEASO fishery statistics"
 author: "Andrew Constable"
 date: "16/09/2020"
 output: 
-  bookdown::pdf_document2:
+  bookdown::html_document2:
     toc: true
     toc_depth: 4
     fig_caption: yes
-bibliography: 'C:\\_w\\_r\\Southern-Ocean-Catch\\CatchRefs.bibtex'   
+bibliography: '/Users/andreworca/Desktop/_wAAD/_r/Southern-Ocean-Catch/CatchRefs.bibtex'   
 
 ---
 
@@ -24,15 +24,17 @@ library(sp)
 library(measoshapes) # from GitHub  remotes::install_github("AustralianAntarcticDivision/measoshapes")
 library(sf)
 library(RColorBrewer)
-library(SOmap)
+library(SOmap)  #remotes::install_github("AustralianAntarcticDivision/SOmap")
+library(geodist)
+library(rgeos)
 library(colorspace)
 
 
 knitr::opts_chunk$set(echo = TRUE)
 
 
-
-WorkDir<-('C:\\_w\\_d\\Catch\\')
+RootDir<-'/Users/andreworca/Desktop/_wAAD/'
+WorkDir<-'/Users/andreworca/Desktop/_wAAD/_d/Catch/'
 
 # Editing and Development Notes:
 #
@@ -48,9 +50,10 @@ source("InputData.R")
 printMaps<-TRUE
 plotCatchMaps <- TRUE
 plotToothfish<-TRUE
-
+addIUU<-TRUE
 
 SOmapTrimLat<--40
+SOmapFixBreaks<-TRUE
 
 # distribution of catches by which areas
 
@@ -69,6 +72,12 @@ source("fnBaseRules.R") # the rules for dividing ASD catch and effort between ME
 source("fnCatch_summary.R")
 source("fnDepthArea.R")
 source("fnCalcMEASO_TimeSeries.R")
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
 
 
 
@@ -169,8 +178,8 @@ CSBdata[dfSelect,"Target_TXN_Code"] <- "KRI"  # for krill fishery
 
 
 # Added records to "B-M Step2.csv"  :  
-#            OT  SUN  6  58  1978  M
-#            OT  SUN  6  58  1979  M
+#            OT  SUN  7  58  1978  M
+#            OT  SUN  7  58  1979  M
 
 ```
 
@@ -186,8 +195,8 @@ Records are assigned in the Bulletin database to fisheries according to target s
 ```{r TargetGroups, echo=FALSE}
 
 TargetFishery<-CSB_taxa[unique(match(CSBdata[,"Target_TXN_Code"],CSB_taxa[,"TXN_Code"])),]
-TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     7,     1,     6,     5,      1,    2,     1 
-                                            ,    5,     1,     4,     8,     1,     2)
+TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     8,     1,     7,     6,      1,    2,     1 
+                                            ,    6,     1,     5,     9,     1,     2)
                          ,TXN_Code = c( "TOT", "ANI", "SQS", "MZZ", "KRI", "LXX", "NOX", "ICX", "NOG"
                                             ,"ELC", "GHP", "ANS", "KCX", "NOS", "WIC")
                          ,DepthRange = c("600-1800m", "100-700m", "Pelagic", "-", "Pelagic", "Pelagic", "0-500m", "100-650", "0-500m"
@@ -236,9 +245,18 @@ res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
                 ,Fishery=CSBdata[,"TFN"]
                 ,Tonnes = CSBdata[,"Green_Weight"])
 res1<-rbind(res1,TFzeros)
+
+# add IUU catch if wanted
+
+if(addIUU){
+  res1_IUU<-data.frame(Decade=10*(floor(Toothfish_IUU[,"Year"]/10))
+                      ,Fishery=rep(4,nrow(Toothfish_IUU))
+                      ,Tonnes = Toothfish_IUU[,"Catch"])
+  res1<-bind_rows(res1,res1_IUU)
+   }
+
 res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Fishery"]),sum))
 dimnames(res)[[2]]<-c("Decade","Fishery","Tonnes")
-
 
 plotYlog<-TRUE
 
@@ -344,13 +362,13 @@ dfTmp1<-merge(CSBdata,data_Location_B_M_Step_1,by=c("GTY_Code","Flag_CTY_Code","
 **Step 2**:  The Soviet Union data for unassigned otter trawls were examined by the combination of three factors - target fishery (only groundfish and krill were represented), CCAMLR catch reporting areas, and year.  For the groundfish fishery, some combinations were dominated by krill with comparatively few groundfish represented.  These were assigned to midwater trawling, with the remainder assigned to bottom fishing.
   
 ```{r GTstep2,echo=FALSE}
-# check OT,SUN,TFN=c(1,6) in more detail as still uncertain - once done, this code can be turned off with logical
+# check OT,SUN,TFN=c(1,7) in more detail as still uncertain - once done, this code can be turned off with logical
 
                        CheckSUN_OTassignments<-FALSE
                        if(CheckSUN_OTassignments){
                                                 dfSUN<-CSBdata[CSBdata[,"GTY_Code"]=="OT" 
                                      & CSBdata[,"Flag_CTY_Code"]=="SUN"
-                                     & CSBdata[,"TFN"] %in% c(1,6),]
+                                     & CSBdata[,"TFN"] %in% c(1,7),]
                          Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
                          LevelCombinations<-unique(dfSUN[,Factors])
                          apply(LevelCombinations,1,fnCatch_summary
@@ -428,7 +446,9 @@ A revised GTY code is added to the main data frame along with an assignment of a
     
 ### Nations
 
-```{r NationsSetup, echo=FALSE}
+[Under development]
+
+```{r NationsSetup, echo=FALSE, eval=FALSE}
 
 
                       CheckSUN_OTassignments<-FALSE
@@ -458,36 +478,23 @@ dfcombo<-CSBdata[,] # CSBdata[,"GAR_Code"] %in% c("48","58","88")
 
 ##################################################################################################
 tempContinue<-FALSE
-
 if(tempContinue){
 
 # check catches by species
-  
-cat("Total catch of individual tax (where a catch in one year by a nation of the taxon :",sep="")
-     
+cat("Total catch of individual taxa (where a catch in one year by a nation of the taxon :",sep="")
   df<-aggregate(df2[,"Tonnes"],by=list(df2[,"Nation"]),sum)
   dimnames(df)[[2]]<-c("Nation","Tonnes")
 
-
-  
-  
 # determine first and last years
-  
+
   TrawlGfish_CTY<-df[,"Nation"]
   YearFirst<-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){min(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
   YearLast <-unlist(do.call(rbind,lapply(TrawlGfish_CTY,function(c,dCSB){max(dCSB[dCSB[,"Nation"]==c,"Year"])},df2)))
 df<-cbind(df,YearFirst,YearLast)
 
-
-
 # add zeros for each Nation*Decade 
-
 decade<-seq(1960,2010,10)
-CTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,CT){return(data.frame(Decade=rep(decade[t],length(CT))
-                                                                                              ,Country=CT
-                                                                                              ,Tonnes=rep(0,length(CT))
-                                                                                              ))},decade,CTY_Names[,"CTn"]))
-
+CTzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,CT){return(data.frame(Decade=rep(decade[t],length(CT)),Country=CT,Tonnes=rep(0,length(CT))))},decade,CTY_Names[,"CTn"]))
 
 res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
                 ,Gear=GT_Names[match(CSBdata[,"GTY_Code"],GT_Names[,"Gear"]),"GTn"]
@@ -518,11 +525,11 @@ dimnames(res)[[2]]<-c("Decade","Gear","Tonnes")
 
 ```
 
-```{r plotWorldCatch, echo=FALSE}
+```{r WorldMap, echo=FALSE}
 # Countries WGS84 from ArcGIS Hub
 # (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
 
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
+World <- rgdal::readOGR(dsn=paste(RootDir,"maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp",sep=""), layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
 
 CNTRY_names<-World$CNTRY_NAME
 CNTRY_n<-CNTRY_names
@@ -548,7 +555,6 @@ CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
 CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
 
 
-
 ```
 
 ```{r plotWorldScience, echo=FALSE, eval=FALSE}
@@ -564,8 +570,9 @@ WoSCTY_attr<-rep(NA,length(CNTRY_names))
 WoSCTY_attr[match(WoSrecords[,"WorldNames"],CNTRY_names)]<-WoSrecords[,"Records"]
 World$Records<-WoSCTY_attr
 
-pmap<-ggplot() + geom_polygon(data = World, aes(x = long, y = lat))
-pmap
+#pmap<-ggplot() + geom_polygon(data = World, aes(x = long, y = lat))
+#pmap
+
 World$id<-as.numeric(World$OBJECTID)
 mapWorld_pts<- fortify(World, region = "id")
 mapWorld<-merge(mapWorld_pts,World,by="id")
@@ -780,8 +787,10 @@ The MEASO areas do not perfectly align with CCAMLR areas (Figure \@ref(fig:CCAML
 if(printMaps) knitr::include_graphics("MEASO-CCAMLR_combined_areas.png")
 ```
 
-The remaining subsections describe the general attributes of fisheries in the three CCAMLR Statistical Areas 48 (Atlantic), 58 (Indian) and 88 (Pacific), and the development of rules for distributing catch in those areas into MEASO areas.
-    
+  
+The remaining subsections describe the general attributes of fisheries in the three CCAMLR Statistical Areas 48 (Atlantic), 58 (Indian) and 88 (Pacific), and the development of rules for distributing catch in those areas into MEASO areas.  
+  
+     
 #### Area 48  
   
 Area 48 has had the most fishing activity in the CCAMLR area, historically concentrated in Subareas 48.1, 48.2 and 48.3.
@@ -963,9 +972,9 @@ kable(BFTaxa,format="simple",align="l",row.names=NA,caption="Assignment of taxa 
 ```
   
 
-
-### Toothfish
-
+  
+### Toothfish  
+  
 ```{r Catcth_toothfish_setup, echo=FALSE}
 
 CatchTaxa<-c("TOT","TOP","TOA")
@@ -975,8 +984,8 @@ DI<-Depth_intervals  # for altering depth intervals as needed for individual tax
 # to ensure toothfish catch is assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-  DI[c(5,6,7),"Minimum"]<- -100
-  DI[c(5,6,7),"Maximum"]<- -600
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -600
   
 # for time series plots
   
@@ -994,7 +1003,8 @@ XtickMinorN<-XtickMajor/XtickMinor-1
 Xlimits<-c(1970,2020)
 
 ```
-
+  
+  
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
 
@@ -1068,31 +1078,41 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the toothfish group for reporting catch")
 
 ```
-
+  
+  
 ```{r plotSOmap_toothfish,echo=FALSE,fig.cap="Total catch of toothfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
-frame()
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1105,26 +1125,33 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 
+#SOleg(c(Cmin,r_small[!is.na(r_small)],Cmax)  # include min and max to fix the colour range
+#      , position = "topright", col = rCols
+#      , ticks = length(ticks)  #breaks=ticks 
+##      ,tlabs = as.character(ticks),#breaks=ticks,
+#      ,trim = (SOmapTrimLat+3)
+##      , ladj = -2
+##      ,lsrt=0
+#      , label = "log10 (t/km2)", type = "continuous")
 
 ```
-
-
+  
+  
 ```{r plotTimeSeries_toothfish, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for toothfish (*Dissostichus* spp.) in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -1149,11 +1176,13 @@ if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
 
 maxCatch<-max(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
+
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -1188,38 +1217,9 @@ p
 
 
 ```
-
+  
 ```{r plotWorld_toothfish, echo=FALSE, fig.cap="Total catches (,000 tonnes) of toothfish over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
 
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
@@ -1227,10 +1227,27 @@ dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_C
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
@@ -1255,9 +1272,10 @@ p <- p + labs(title="Total accumulated Toothfish Catch by Flag State", fill = "C
 p
 
 ```
-
-
-### Groundfish
+  
+  
+### Groundfish  
+  
 ```{r Catcth_groundfish_setup, echo=FALSE}
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(1,2,10,15,16)),"Code"]
@@ -1268,8 +1286,8 @@ DI<-Depth_intervals  # for altering depth intervals as needed for individual tax
 # to ensure groundfish catch are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-  DI[c(5,6,7),"Minimum"]<- -100
-  DI[c(5,6,7),"Maximum"]<- -600
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -600
   
 # for time series plots
   
@@ -1287,8 +1305,8 @@ XtickMinorN<-XtickMajor/XtickMinor-1
 Xlimits<-c(1970,2020)
 
 ```
-
-
+  
+  
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
 
@@ -1362,31 +1380,41 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the groundfish group for reporting catch")
 
 ```
-
+  
+  
 ```{r plotSOmap_groundfish,echo=FALSE,fig.cap="Total catch of groundfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
 
-frame()
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1399,26 +1427,25 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 
 
 ```
-
-
+  
+  
 ```{r plotTimeSeries_groundfish, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for groundfish in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -1446,8 +1473,9 @@ minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -1481,39 +1509,11 @@ p
 
 
 
-```
-
+``` 
+  
+  
 ```{r plotWorld_groundfish, echo=FALSE, fig.cap="Total catches (,000 tonnes) of groundfish over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
 
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
@@ -1521,13 +1521,31 @@ dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_C
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
+
 World$Catch<-WcatchCTY_attr
 
 World$id<-as.numeric(World$OBJECTID)
@@ -1549,9 +1567,10 @@ p <- p + labs(title="Total accumulated groundfish Catch by Flag State", fill = "
 p
 
 ```
-
-
-### Grenadiers
+  
+  
+### Grenadiers  
+  
 ```{r Catcth_grenadiers_setup, echo=FALSE}
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(6)),"Code"]
@@ -1562,8 +1581,8 @@ DI<-Depth_intervals  # for altering depth intervals as needed for individual tax
 # to ensure catches are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-  DI[c(5,6,7),"Minimum"]<- -1000
-  DI[c(5,6,7),"Maximum"]<- -2000
+  DI[c(4,5,6),"Minimum"]<- -1000
+  DI[c(4,5,6),"Maximum"]<- -2000
   
 # for time series plots
   
@@ -1581,8 +1600,8 @@ XtickMinorN<-XtickMajor/XtickMinor-1
 Xlimits<-c(1970,2020)
 
 ```
-
-
+  
+  
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
 
@@ -1656,31 +1675,43 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the grenadier group for reporting catch")
 
 ```
-
+  
+    
 ```{r plotSOmap_grenadier,echo=FALSE,fig.cap="Total catch of grenadier from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
 
-frame()
+######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1693,26 +1724,24 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
-
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 
 ```
-
-
+  
+  
 ```{r plotTimeSeries_grenadier, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for grenadier in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -1740,8 +1769,9 @@ minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -1776,38 +1806,10 @@ p
 
 
 ```
-
+  
+    
 ```{r plotWorld_grenadier, echo=FALSE, fig.cap="Total catches (,000 tonnes) of grenadier over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
 
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
@@ -1815,10 +1817,27 @@ dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_C
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
@@ -1843,8 +1862,10 @@ p <- p + labs(title="Total accumulated grenadier Catch by Flag State", fill = "C
 p
 
 ```
-
-### Skates and rays
+  
+    
+### Skates and rays  
+  
 ```{r Catcth_skates_setup, echo=FALSE}
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(7)),"Code"]
@@ -1855,8 +1876,8 @@ DI<-Depth_intervals  # for altering depth intervals as needed for individual tax
 # to ensure catches are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-  DI[c(5,6,7),"Minimum"]<- -1000
-  DI[c(5,6,7),"Maximum"]<- -2000
+  DI[c(4,5,6),"Minimum"]<- -1000
+  DI[c(4,5,6),"Maximum"]<- -2000
   
 # for time series plots
   
@@ -1874,7 +1895,9 @@ XtickMinorN<-XtickMajor/XtickMinor-1
 Xlimits<-c(1970,2020)
 
 ```
-
+  
+    
+      
 
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
@@ -1949,31 +1972,42 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
 kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
 ```
-
-```{r plotSOmap_skates,echo=FALSE,fig.cap="Total catch of skates from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
+  
+  
+```{r plotSOmap_skates,echo=FALSE,fig.cap="Total catch of skates and rays from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
+######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
 
-frame()
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1986,26 +2020,23 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
-
-
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 ```
-
-
+  
+  
 ```{r plotTimeSeries_skates, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for skates and rays in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -2033,8 +2064,9 @@ minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -2069,38 +2101,10 @@ p
 
 
 ```
-
+  
+    
 ```{r plotWorld_skates, echo=FALSE, eval=FALSE, fig.cap="Total catches (,000 tonnes) of skates and rays over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
 
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
@@ -2108,10 +2112,27 @@ dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_C
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
@@ -2136,8 +2157,11 @@ p <- p + labs(title="Total accumulated skates and rays Catch by Flag State", fil
 p
 
 ```
-
-### Icefish
+  
+    
+### Icefish  
+  
+    
 ```{r Catcth_icefish_setup, echo=FALSE}
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(3,9)),"Code"]
@@ -2147,8 +2171,8 @@ DI<-Depth_intervals  # for altering depth intervals as needed for individual tax
 # to ensure icefish catches are assigned to correct depth range when reported as bycatch
 # in pelagic fisheries
 
-  DI[c(5,6,7),"Minimum"]<- -100
-  DI[c(5,6,7),"Maximum"]<- -700
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -700
   
 # for time series plots
   
@@ -2166,8 +2190,8 @@ XtickMinorN<-XtickMajor/XtickMinor-1
 Xlimits<-c(1970,2020)
 
 ```
-
-
+  
+  
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
 
@@ -2241,30 +2265,41 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
 
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
 kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 ```
-
+  
+    
 ```{r plotSOmap_icefish,echo=FALSE,fig.cap="Total catch of icefish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
+######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
 
-frame()
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2277,26 +2312,24 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
-
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 
 ```
-
-
+  
+  
 ```{r plotTimeSeries_icefish, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for icefish in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -2324,8 +2357,9 @@ minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -2360,49 +2394,37 @@ p
 
 
 ```
-
+  
+    
 ```{r plotWorld_icefish, echo=FALSE, fig.cap="Total catches (,000 tonnes) of icefish over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
-
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
 dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_Code"],CR_Flag_CTY[,"CTY_Code"]),"World_Name"])
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
@@ -2427,9 +2449,10 @@ p <- p + labs(title="Total accumulated icefish Catch by Flag State", fill = "Cat
 p
 
 ```
-
-
-### Silverfish and myctophids
+  
+  
+### Silverfish and myctophids  
+  
 ```{r Catcth_mesopelagic_setup, echo=FALSE}
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(12,14)),"Code"]
@@ -2455,10 +2478,10 @@ Xlimits<-c(1970,2020)
 
 
 ```
-
-
-
-
+  
+  
+  
+  
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
 
@@ -2532,31 +2555,40 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
-
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
-kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
+kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the mesopelagic fish group for reporting catch")
 
 ```
 
-```{r plotSOmap_mesopelagic,echo=FALSE,fig.cap="Total catch of toothfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
+```{r plotSOmap_mesopelagic,echo=FALSE,fig.cap="Total catch of mesopelagic fish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
+######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
 
-frame()
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2569,26 +2601,24 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
-
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 
 ```
-
-
+  
+  
 ```{r plotTimeSeries_mesopelagic, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for mesopelagic fish in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -2616,8 +2646,9 @@ minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -2652,49 +2683,37 @@ p
 
 
 ```
-
+  
+    
 ```{r plotWorld_mesopelagic, echo=FALSE, fig.cap="Total catches (,000 tonnes) of mesopelagic fish over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
-
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
 dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_Code"],CR_Flag_CTY[,"CTY_Code"]),"World_Name"])
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
@@ -2719,8 +2738,10 @@ p <- p + labs(title="Total accumulated mesopelagic fish Catch by Flag State", fi
 p
 
 ```
-
-### Krill
+  
+    
+### Krill  
+  
 ```{r Catcth_krill_setup, echo=FALSE}
 
 CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(13)),"Code"]
@@ -2744,8 +2765,8 @@ XtickMinorN<-XtickMajor/XtickMinor-1
 Xlimits<-c(1970,2020)
 
 ```
-
-
+  
+  
 ```{r ,echo=FALSE}
 ### codeCatchProcess ######
 
@@ -2819,31 +2840,41 @@ r_small<-aggregate(r, fact=4)
 
 rgg<-as.data.frame(r_small,xy=2)
 
-# convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
-Cmin <- floor(min(rgg[!is.nan(rgg$layer),"layer"]))
-Cmax <- ceiling(max(rgg[!is.nan(rgg$layer),"layer"]))
-Cn   <- 1000
-rCols<-col_pal(Cn)
-rColour<-rCols[ceiling((rgg$layer-Cmin)/(Cmax-Cmin)*Cn)]
-
 ```
-
-
+  
+  
 ```{r,echo=FALSE}
 dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
 dimnames(dfTaxa)[[2]]<-c("Code","Name")
 kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,caption="Assignment of taxa to the icefish group for reporting catch")
 
 ```
-
-```{r plotSOmap_Krill,echo=FALSE,fig.cap="Total catch of toothfish from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
+  
+    
+```{r plotSOmap_Krill,echo=FALSE,fig.cap="Total catch of krill from 1970 to 2018 plotted against ocean depth (bottom left legend) as catch density (tonnes per square kilometer) on a log10 scale (the top right legend).  Source data: CCAMLR Statistical Bulletin 2019.  Bulletin data were allocated according to evidence for fishing depths and locations in reports of the Scientific Committee, CCAMLR Conservation Measures, and various descriptions in the scientific literature, particular Kock (1992).  Catches were spread uniformly across the smallest area identified from those sources for an individual catch based on country, depth range for a given target fishery/gear type, and, where reports allowed it, year.  Grey lines show a graticule.  Red lines show the boundaries of the 15 MEASO areas."}
 
 
 ######### codePlotCatchMap #################
+######### codePlotCatchMap #################
+# convert rgg$layer to colour
+col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
 
-frame()
+if(SOmapFixBreaks){
+  Cmin<- (-9)
+  Cmax <- 2
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+rCols<-col_pal(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2856,26 +2887,23 @@ SOplot(SOmap::SOmap_data$ant_coast_ice
 
 ## create a circle
 ## distance from south pole to -40
-width <-  geodist::geodist(cbind(0, -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
 pContinent<- SOmap::SOmap_data$continent
 
-#crop not working yet
-#pContinent <- raster::crop(pContinent, 
-#   rgeos::gBuffer(SpatialPoints(cbind(0, 0)), width = width))
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
 
 SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
 
 SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
-plot(r_small,col=rCols,legend=FALSE, add=TRUE)
-SOleg(r_small, position = "topright", col = rCols
-      , ticks = length(ticks),
-      tlabs = as.character(ticks),#breaks=ticks,
-      trim = (SOmapTrimLat+5), label = "log10 (t/km2)", type = "continuous")
-
-
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 ```
-
-
+  
+  
 ```{r plotTimeSeries_krill, echo=FALSE, fig.cap="Time series of catches (tonnes) from all gear for krill in each of the MEASO areas."}
 
 ######### codePlotCatchTimeSeries #################
@@ -2903,8 +2931,9 @@ minCatch<-min(pdf[!is.na(pdf[,"Catch"]),"Catch"])
 if(plotYlog){
   Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
 } else {
-  Ylimits<-c(0,(ceiling(maxCatch/YtickMajor)*YtickMajor))
-  
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
 }
 pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
 Area<-pdf$MEASO
@@ -2939,49 +2968,38 @@ p
 
 
 ```
-
+  
+    
 ```{r plotWorld_krill, echo=FALSE, fig.cap="Total catches (,000 tonnes) of krill over the historical period for each Flag State."}
 ######### codePlotCatchWorldMap #################
-
-# Countries WGS84 from ArcGIS Hub
-# (https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1?geometry=-120.937%2C-89.983%2C120.937%2C-88.772)
-
-World <- rgdal::readOGR(dsn="C:/_w/maps/shapefiles/Longitude_Graticules_and_World_Countries_Boundaries-shp", layer="99bfd9e7-bb42-4728-87b5-07f8c8ac631c2020328-1-1vef4ev.lu5nk")
-
-CNTRY_names<-World$CNTRY_NAME
-CNTRY_n<-CNTRY_names
-
-
-# match country codes in CSBdata and names in World Map
-
-CR_Flag_CTY<-CRcountry[ which(CRcountry[,"CTY_Code"] %in%  unique(CSBdata[,"Flag_CTY_Code"])),]
-CR_Flag_CTY<-cbind(CR_Flag_CTY,CR_Flag_CTY[,"CTY_Name"])
-dimnames(CR_Flag_CTY)[[2]]<-c("CTY_Code","Name","World_Name")
-
-WorldNames<-matrix(c("GBR","United Kingdom"
-                     ,"SUN","Russia-Ukraine"
-                     ,"KOR","South Korea"
-                     ,"DDR","Germany"
-                     ,"USA","United States"
-                     ,"DEU","Germany"
-                     ,"RUS","Russia"
-                     ,"CHN","China"),ncol=2,byrow=TRUE,dimnames=list(NULL,c("CTY_Code","World_Name")))
-whereReplaceName <- which(CR_Flag_CTY[,"CTY_Code"] %in% WorldNames[,1])
-CR_Flag_CTY<-bind_rows(CR_Flag_CTY[-whereReplaceName,]
-                       ,merge(CR_Flag_CTY[whereReplaceName,c(1,2)],WorldNames,by="CTY_Code"))
-CR_Flag_CTY<-CR_Flag_CTY[order(CR_Flag_CTY[,"World_Name"]),]
-
-
 dfSubset<-CSBdata[which(CSBdata[,"Catch_TXN_Code"] %in% CatchTaxa),c("Flag_CTY_Code","Green_Weight")]
 
 dfSubset<-bind_cols(dfSubset,WorldName = CR_Flag_CTY[match(dfSubset[,"Flag_CTY_Code"],CR_Flag_CTY[,"CTY_Code"]),"World_Name"])
 
 WorldCatch<-aggregate(dfSubset[,"Green_Weight"],by=list(dfSubset[,"WorldName"]),sum)
 dimnames(WorldCatch)[[2]]<-c("Country","Catch")
-WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]<-
-  WorldCatch[match(c("Russia","Ukraine"),WorldCatch[,"Country"]),"Catch"]+
-  WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]*c(0.78,0.22)# population proportions in Year 2000
-WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+
+# split USSR into catches by Russian and Ukraine according to population size
+USSRcatch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),"Catch"]
+if(!is.na(USSRcatch)){
+
+  R_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"]
+  if(length(R_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Russia")),"Catch"] <- R_Catch+USSRcatch*0.78
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Russia"),Catch=c(USSRcatch*0.78)))  
+    } 
+  
+  U_Catch<-WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"]
+  if(length(U_Catch)!=0) {
+    WorldCatch[which(WorldCatch[,"Country"] %in% c("Ukraine")),"Catch"] <- U_Catch+USSRcatch*0.22
+    } else {
+    WorldCatch<-bind_rows(WorldCatch,data.frame(Country = c("Ukraine"),Catch=c(USSRcatch*0.22)))  
+    } 
+
+  WorldCatch<-WorldCatch[-which(WorldCatch[,"Country"] %in% c("Russia-Ukraine")),]
+  }  # end USSR catch
+
 
 WcatchCTY_attr<-rep(NA,length(CNTRY_names))
 WcatchCTY_attr[match(WorldCatch[,"Country"],CNTRY_names)]<-WorldCatch[,"Catch"]/1000
@@ -3006,8 +3024,8 @@ p <- p + labs(title="Total accumulated Krill Catch by Flag State", fill = "Catch
 p
 
 ```
-
-
-
+  
+  
+  
 # References    
 .     

@@ -17,7 +17,7 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 1
     ,Subset            = (  CSBdata[,"GAR_Code"] == "482"  
                             & CSBdata[,"TFN"]==1 
-    )
+                         )
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.2" 
                           & Cbed_rules[,"MEASO"]=="AOA"
     ) # end subset
@@ -31,14 +31,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 2
     ,Subset            = (  CSBdata[,"GAR_Code"] == "482"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==2 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.2" 
                            & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   ##############################################################################################
   BaseRules<-c(BaseRules,list(list( # start adding rule
@@ -47,14 +44,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"] == "482"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==3 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset   
+                         ) # end RuleSubset   
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.2" 
                           & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -64,14 +58,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 6
     ,Subset            = (  CSBdata[,"GAR_Code"] == "482"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==6 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==7 
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.2" 
                            & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -81,14 +72,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 8
     ,Subset            = (  CSBdata[,"GAR_Code"] == "482"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==8 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset   
+                            & CSBdata[,"TFN"]==9 
+                          ) # end RuleSubset   
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.2" 
                           & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -98,14 +86,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"] == "484"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==3 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.4" 
                           & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -115,14 +100,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 6
     ,Subset            = (  CSBdata[,"GAR_Code"] == "484"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==6 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==7 
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.4" 
                            & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -132,13 +114,10 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 6
     ,Subset            = (  CSBdata[,"GAR_Code"] == "485"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==6 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==7 
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.5" 
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -148,13 +127,10 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"] == "485"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==3 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.5" 
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -164,14 +140,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"] == "486"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==3 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.6" 
                           & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -181,14 +154,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 6
     ,Subset            = (  CSBdata[,"GAR_Code"] == "486"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==6 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==7 
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.6"
                            & Cbed_rules[,"MEASO"]=="AOA"
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -196,17 +166,14 @@ fnBaseRules<-function(CSBdata
     Rule              = "48M6_S"
     ,Description       = "Subarea 48.6- silverfish"
     ,ASDstatArea       = 48
-    ,TypeDepthInterval = 5
+    ,TypeDepthInterval = 4    
     ,Subset            = (  CSBdata[,"GAR_Code"] == "486"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==5 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.6"
                           & Cbed_rules[,"MEASO"]=="AOA"
                           & Cbed_rules[,"Lat"] < -60
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -216,14 +183,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 1
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"] == 1 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.3" 
                            & Cbed_rules[,"MEASO"]=="AOS"
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -233,14 +197,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 6
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==6 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==7 
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="48.3" 
                            & (Cbed_rules[,"SSMU"]=="SGE" | Cbed_rules[,"SSMU"]=="SGW" )
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -250,14 +211,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 5
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==5 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==6 
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.3" 
                           & Cbed_rules[,"MEASO"]=="AOS"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -267,14 +225,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 2
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==2 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.3" 
                           & Cbed_rules[,"MEASO"]=="AOS"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -284,14 +239,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 7
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==7 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==8 
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.3" 
                           & Cbed_rules[,"MEASO"]=="AOS"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -301,11 +253,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 48
     ,TypeDepthInterval = 8
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
-                            & CSBdata[,"TFN"]==8 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==9 
+                           ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.3" 
                           & Cbed_rules[,"MEASO"]=="AOS"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -316,11 +268,11 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "483"
                             & CSBdata[,"TFN"]==3 
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="48.3" 
                           & Cbed_rules[,"MEASO"]=="AOS"
                           & Cbed_rules[,"Lat"] < -52    # avoid Morris-Ewing Bank
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ################
@@ -335,9 +287,7 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "48"
                             & CSBdata[,"GTY_rev"]      == "OTB"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
-                            #            & CSBdata[,"TFN"]          == 1
-                            #            & CSBdata[,"Split_Year"]   == 1986
-    ) # end RuleSubset  
+                            ) # end RuleSubset  
     ,CbedAreaSubset    =  (((Cbed_rules[,"ASD"]=="48.1" & 
                                (     (    Cbed_rules[,"SSMU"]=="APBSE" 
                                           & Cbed_rules[,"Lon"]>-56 
@@ -354,7 +304,7 @@ fnBaseRules<-function(CSBdata
                                    |  Cbed_rules[,"SSMU"]=="SONE"))
                             | Cbed_rules[,"ASD"]=="48.3")
                            
-    ) # end subset
+                             ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -366,14 +316,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "481"
                             & CSBdata[,"GTY_rev"]      == "LLS"
                             & CSBdata[,"Flag_CTY_Code"]== "CHL"
-                            #            & CSBdata[,"TFN"]          == 3
-                            #            & CSBdata[,"Split_Year"]   == 1998
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="48.1" & 
                               (  Cbed_rules[,"SSMU"]=="APDPW" 
                                  |  Cbed_rules[,"SSMU"]=="APDPE" 
                                  |  Cbed_rules[,"SSMU"]=="APEI"   ))
-    ) # end subset
+                           ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -384,17 +332,14 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 1
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "481"
                             & CSBdata[,"GTY_rev"]      == "OTB"
-                            #            & CSBdata[,"Flag_CTY_Code"]
-                            #            & CSBdata[,"TFN"]         
-                            #            & CSBdata[,"Split_Year"]   
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="48.1" & 
                              ( (Cbed_rules[,"SSMU"]=="APBSE" & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) |
                                  (Cbed_rules[,"SSMU"]=="APE"   & Cbed_rules[,"Lon"]>-56 & Cbed_rules[,"Lat"]>-63.3) ) | 
                              Cbed_rules[,"SSMU"]=="APDPW" | 
                              Cbed_rules[,"SSMU"]=="APDPE" | 
                              Cbed_rules[,"SSMU"]=="APEI"   )
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##################
@@ -409,9 +354,7 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "48"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & ( CSBdata[,"Flag_CTY_Code"]== "SUN" | CSBdata[,"Flag_CTY_Code"]== "LVA")
-                            #            & CSBdata[,"TFN"]          == 1 | CSBdata[,"TFN"] == 6)
-                            #            & CSBdata[,"Split_Year"]   <= 1978  and Latvia in 1993
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (((Cbed_rules[,"ASD"]=="48.1" & 
                               (     (    Cbed_rules[,"SSMU"]=="APBSE" 
                                          & Cbed_rules[,"Lon"]>-56 
@@ -428,7 +371,7 @@ fnBaseRules<-function(CSBdata
                                     |  Cbed_rules[,"SSMU"]=="SONE"))| 
                              Cbed_rules[,"ASD"]=="48.3")
                           
-    ) # end subset
+                            ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -439,10 +382,7 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 9
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "481"
                             & ( CSBdata[,"GTY_rev"]      == "OTM" | CSBdata[,"GTY_rev"] == "TM" | CSBdata[,"GTY_rev"] == "TMB")
-                            #            & CSBdata[,"Flag_CTY_Code"]
-                            #            & CSBdata[,"TFN"]         
-                            #            & CSBdata[,"Split_Year"]   
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="48.1"  
                             
                             & !(    Cbed_rules[,"SSMU"]=="APE" # Antarctic Peninsula East 
@@ -451,8 +391,8 @@ fnBaseRules<-function(CSBdata
                             &!(    Cbed_rules[,"SSMU"]=="APPA" # Antarctic Peninsula Pelagic Area  
                                    & Cbed_rules[,"Lon"] > -57
                                    & Cbed_rules[,"Lat"] < -63.3) 
-    ) 
-    ) # end subset
+                              ) 
+                         ) # end subset
   ))) # end adding rule
   
   ############################
@@ -468,14 +408,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 1
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5842"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==1 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.2" 
                           & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -485,14 +422,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 2
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5842"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==2 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.2" 
                           & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -502,14 +436,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5842"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
                             & CSBdata[,"TFN"]==3 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="58.4.2" 
                            & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -519,14 +450,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 4
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5842"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==4 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==5 
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.2" 
                           & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -536,14 +464,11 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 6
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5842"  
-                            #          & CSBdata[,"GTY_rev"]      
-                            #          & CSBdata[,"Flag_CTY_Code"]
-                            & CSBdata[,"TFN"]==6 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                            & CSBdata[,"TFN"]==7 
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.2" 
                           & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -555,12 +480,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  ( CSBdata[,"GAR_Code"] == "585"  
                               | CSBdata[,"GAR_Code"] == "5851"  
                               | CSBdata[,"GAR_Code"] == "5852"  
-    )
-    & CSBdata[,"TFN"] == 1
-    ) # end RuleSubset  
+                             ) #
+                            & CSBdata[,"TFN"] == 1
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
                            & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -572,12 +497,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            =(  ( CSBdata[,"GAR_Code"] == "585"  
                              | CSBdata[,"GAR_Code"] == "5851"  
                              | CSBdata[,"GAR_Code"] == "5852"  
-    )
-    & CSBdata[,"TFN"] == 2
-    ) # end RuleSubset   
+                           )
+                          & CSBdata[,"TFN"] == 2
+                         ) # end RuleSubset   
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
                           & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -589,12 +514,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  ( CSBdata[,"GAR_Code"] == "585"  
                               | CSBdata[,"GAR_Code"] == "5851"  
                               | CSBdata[,"GAR_Code"] == "5852"  
-    )
-    & CSBdata[,"TFN"] == 3
-    ) # end RuleSubset  
+                            )
+                           & CSBdata[,"TFN"] == 3
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
                           & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -604,12 +529,12 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 3
     ,Subset            = (  ( CSBdata[,"GAR_Code"] == "586"
-    )
-    & CSBdata[,"TFN"] == 3
-    ) # end RuleSubset  
+                            )
+                            & CSBdata[,"TFN"] == 3
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.6" )
                           & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -619,12 +544,12 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 1
     ,Subset            =  (  ( CSBdata[,"GAR_Code"] == "586"
-    )
-    & CSBdata[,"TFN"] == 1
-    ) # end RuleSubset 
+                              )
+                             & CSBdata[,"TFN"] == 1
+                          ) # end RuleSubset 
     ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.6" )
                            & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset
+                           ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -635,12 +560,12 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 3
     ,Subset            =  (  ( CSBdata[,"GAR_Code"] == "5843a"
                                | CSBdata[,"GAR_Code"] == "5843b"
-    )
-    & CSBdata[,"TFN"] == 3
-    ) # end RuleSubset 
+                             ) 
+                             & CSBdata[,"TFN"] == 3
+                          ) # end RuleSubset 
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.3a" | Cbed_rules[,"ASD"]=="58.4.3b" )
                           & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -651,12 +576,12 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 1
     ,Subset            = (  (CSBdata[,"GAR_Code"] == "5844a"
                              | CSBdata[,"GAR_Code"] == "5844b"
-    )
-    & CSBdata[,"TFN"] == 1
-    ) # end RuleSubset  
+                             )
+                           & CSBdata[,"TFN"] == 1
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.4")
                           & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ######################## the problem #############################################
@@ -667,12 +592,12 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 6
     ,Subset            = (  (CSBdata[,"GAR_Code"] == "5844a"
                              | CSBdata[,"GAR_Code"] == "5844b"
-    )
-    & CSBdata[,"TFN"] == 6
-    ) # end RuleSubset  
+                            )
+                           & CSBdata[,"TFN"] == 7
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.4")
                           & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -683,12 +608,12 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 3
     ,Subset            =  (  (CSBdata[,"GAR_Code"] == "5844a"
                               | CSBdata[,"GAR_Code"] == "5844b"
-    )
-    & CSBdata[,"TFN"] == 3
-    ) # end RuleSubset 
+                             )
+                             & CSBdata[,"TFN"] == 3
+                          ) # end RuleSubset 
     ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.4.4")
                            & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -699,12 +624,12 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 3
     ,Subset            = (  (CSBdata[,"GAR_Code"] == "587"
                              | CSBdata[,"GAR_Code"] == "587"
-    )
-    & CSBdata[,"TFN"] == 3
-    ) # end RuleSubset  
+                            )
+                            & CSBdata[,"TFN"] == 3
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.7")
                           & Cbed_rules[,"MEASO"]=="CIN"
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ################
@@ -721,7 +646,7 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
                             & CSBdata[,"TFN"]          == 1
                             & CSBdata[,"Split_Year"]   < 1978
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (
       (  Cbed_rules[,"ASD"]=="58.4.1"
          | Cbed_rules[,"ASD"]=="58.4.2"
@@ -747,7 +672,7 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
                             & CSBdata[,"TFN"]          == 1
                             & ( CSBdata[,"Split_Year"]   == 1978 | CSBdata[,"Split_Year"]   == 1979 )
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =   (
       (  Cbed_rules[,"ASD"]=="58.4.1"
          | Cbed_rules[,"ASD"]=="58.4.2"
@@ -771,16 +696,13 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "5841"
                             & CSBdata[,"GTY_rev"]      == "LLS"
                             & !(CSBdata[,"Flag_CTY_Code"]== "NZL")
-                            #       & CSBdata[,"TFN"]          == 6
-                            #       & CSBdata[,"Split_Year"]   == 1980
-    ) # end RuleSubset  
+                           ) # end RuleSubset  
     ,CbedAreaSubset    = ((  Cbed_rules[,"ASD"]=="58.4.1" 
                              & (  Cbed_rules[,"SSRU"]=="5841C" 
                                   | Cbed_rules[,"SSRU"]=="5841E"  
                                   | Cbed_rules[,"SSRU"]=="5841G"
-                             )
-    )
-    ) # end subset
+                             ))
+                            ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -792,17 +714,14 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "5841"
                             & CSBdata[,"GTY_rev"]      == "LLS"
                             & CSBdata[,"Flag_CTY_Code"]== "NZL"
-                            #       & CSBdata[,"TFN"]          == 6
-                            #       & CSBdata[,"Split_Year"]   == 1980
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (  ( Cbed_rules[,"ASD"]=="58.4.1" 
                               &(  Cbed_rules[,"SSRU"]=="5841C" 
                                   | Cbed_rules[,"SSRU"]=="5841E"  
                                   | Cbed_rules[,"SSRU"]=="5841G"
-                              )
-    ) 
-    & Cbed_rules[,"MEASO"]=="EIA"
-    ) # end subset 
+                              )) 
+                           & Cbed_rules[,"MEASO"]=="EIA"
+                           ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -814,9 +733,7 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "5841"
                             & CSBdata[,"GTY_rev"]      == "OTB"
                             & CSBdata[,"Flag_CTY_Code"]== "AUS"
-                            #       & CSBdata[,"TFN"]          == 6
-                            #       & CSBdata[,"Split_Year"]   == 1980
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (((  Cbed_rules[,"ASD"]=="58.4.1" 
     ) & Cbed_rules[,"MEASO"]=="CIS")
     ) # end subset 
@@ -831,12 +748,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5843"  
                             & (CSBdata[,"GTY_rev"]  == "OTB" | CSBdata[,"GTY_rev"]  == "OTM" )     
                             & CSBdata[,"Flag_CTY_Code"] == "AUS"
-                            #          & CSBdata[,"TFN"] 
-                            #          & CSBdata[,"Split_Year"] 
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (((  Cbed_rules[,"ASD"]=="58.4.3a" | Cbed_rules[,"ASD"]=="58.4.3b"
-    ) & Cbed_rules[,"MEASO"]=="CIS")
-    ) # end subset 
+                          ) & Cbed_rules[,"MEASO"]=="CIS")
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -848,10 +763,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5844"  
                             & CSBdata[,"GTY_Code"]  == "OTB"
                             & CSBdata[,"Flag_CTY_Code"] == "JPN"
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  (((  Cbed_rules[,"ASD"]=="58.4.4"
-    ) & Cbed_rules[,"MEASO"]=="CIS")
-    ) # end subset
+                          ) & Cbed_rules[,"MEASO"]=="CIS")
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -865,10 +780,10 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
                             & CSBdata[,"TFN"]          == 1
                             & ( CSBdata[,"Split_Year"]   == 1985 | CSBdata[,"Split_Year"]   == 1987 )
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (((  Cbed_rules[,"ASD"]=="58.4.4"
-    ) & Cbed_rules[,"MEASO"]=="CIS")
-    ) # end subset
+                            ) & Cbed_rules[,"MEASO"]=="CIS")
+                           ) # end subset
   ))) # end adding rule
   
   ############################
@@ -885,7 +800,7 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
                             & CSBdata[,"TFN"]          == 1
                             & CSBdata[,"Split_Year"]   == 1979
-    ) # end RuleSubset  
+                            ) # end RuleSubset  
     ,CbedAreaSubset    = (
       (  Cbed_rules[,"ASD"]=="58.4.1"
          | Cbed_rules[,"ASD"]=="58.4.2"
@@ -897,7 +812,7 @@ fnBaseRules<-function(CSBdata
          | Cbed_rules[,"ASD"]=="58.6"
       )
       & Cbed_rules[,"MEASO"]=="CIS"
-    ) # end subset 
+      ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -909,9 +824,9 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "58"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
-                            & CSBdata[,"TFN"]          == 6
+                            & CSBdata[,"TFN"]          == 7
                             & ( CSBdata[,"Split_Year"]   == 1978 | CSBdata[,"Split_Year"]   == 1979 )
-    ) # end RuleSubset  
+                           ) # end RuleSubset  
     ,CbedAreaSubset    =  (
       (  Cbed_rules[,"ASD"]=="58.4.1"
          | Cbed_rules[,"ASD"]=="58.4.2"
@@ -923,7 +838,7 @@ fnBaseRules<-function(CSBdata
          | Cbed_rules[,"ASD"]=="58.6"
       )
       & Cbed_rules[,"MEASO"]=="CIA"
-    ) # end subset
+      ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -935,12 +850,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "5841"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & (CSBdata[,"Flag_CTY_Code"]== "JPN" | CSBdata[,"Flag_CTY_Code"]== "CHN")
-                            & CSBdata[,"TFN"]          == 6
+                            & CSBdata[,"TFN"]          == 7
                             & !( CSBdata[,"Split_Year"]   == 1976 | CSBdata[,"Split_Year"]   == 1982 | CSBdata[,"Split_Year"]   == 1984 )
-    ) # end RuleSubset  
+                            ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.1"
                           & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -953,10 +868,10 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN" 
                             & (CSBdata[,"Split_Year"]==1983 | CSBdata[,"Split_Year"]==1984)
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.1"
                           & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                           ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -969,10 +884,10 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN" 
                             & CSBdata[,"Split_Year"]==1990
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.1"
                           & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -985,10 +900,10 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "JPN" 
                             & CSBdata[,"Split_Year"]==1976
-    ) # end RuleSubset  
+                           ) # end RuleSubset  
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.1"
                           & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                           ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1001,10 +916,10 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "JPN" 
                             & (CSBdata[,"Split_Year"]==1982 | CSBdata[,"Split_Year"]==1984)
-    ) # end RuleSubset   
+                         ) # end RuleSubset   
     ,CbedAreaSubset    = (Cbed_rules[,"ASD"]=="58.4.1"
                           & (Cbed_rules[,"MEASO"]=="EIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1016,10 +931,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5843"  
                             & CSBdata[,"GTY_rev"]  == "OTM"
                             & CSBdata[,"Flag_CTY_Code"] == "JPN"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.3a" | Cbed_rules[,"ASD"]=="58.4.3b")
                           & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1031,10 +946,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"] == "5844"  
                             & CSBdata[,"GTY_Code"]  == "OTM"
                             & CSBdata[,"Flag_CTY_Code"] == "JPN"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.4")
                           & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1046,12 +961,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "584"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "KOR"
-                            & CSBdata[,"TFN"]          == 6
+                            & CSBdata[,"TFN"]          == 7
                             #      & CSBdata[,"Split_Year"]   1979-1984
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.1" | Cbed_rules[,"ASD"]=="58.4.2")
                           & (Cbed_rules[,"MEASO"]=="CIA" |  Cbed_rules[,"MEASO"]=="EIA")  # need to not include northern banks and seamounts
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1063,12 +978,12 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "584"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "FRA"
-                            & CSBdata[,"TFN"]          == 6
+                            & CSBdata[,"TFN"]          == 7
                             & CSBdata[,"Split_Year"]   == 1980
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.4.4")
                           & (Cbed_rules[,"MEASO"]=="CIS")  
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1080,7 +995,7 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "584"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
-    ) # end RuleSubset   
+                          ) # end RuleSubset   
     ,CbedAreaSubset    = (
       (  Cbed_rules[,"ASD"]=="58.4.1"
          | Cbed_rules[,"ASD"]=="58.4.2"
@@ -1089,7 +1004,7 @@ fnBaseRules<-function(CSBdata
          | Cbed_rules[,"ASD"]=="58.4.4"
       )
       & (Cbed_rules[,"MEASO"]=="CIA")  # need to not include northern banks and seamounts
-    ) # end subset 
+      ) # end subset 
   ))) # end adding rule
   
   ############################
@@ -1110,10 +1025,10 @@ fnBaseRules<-function(CSBdata
                             & CSBdata[,"Flag_CTY_Code"]== "POL"
                             & CSBdata[,"TFN"]          == 1
                             & CSBdata[,"Split_Year"]   == 1978
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (Cbed_rules[,"ASD"]=="88.3"
                            & (Cbed_rules[,"MEASO"]=="EPA")  # need to not include northern banks and seamounts
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1124,10 +1039,10 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "881"
                             & ( CSBdata[,"GTY_rev"]    == "LLS" | CSBdata[,"GTY_rev"]=="FPO")
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.1"
                             & (Cbed_rules[,"MEASO"]=="WPA")  # need to not include northern banks and seamounts
-    ) # end subset
+                         ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1139,10 +1054,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "881"
                             & CSBdata[,"GTY_rev"]      == "OTB"
                             & CSBdata[,"Flag_CTY_Code"]== "NZL"
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    = ( Cbed_rules[,"ASD"]=="88.1"
                            & (Cbed_rules[,"MEASO"]=="WPA") 
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1153,7 +1068,7 @@ fnBaseRules<-function(CSBdata
     ,TypeDepthInterval = 3
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "882"
                             & CSBdata[,"GTY_rev"]      == "LLS"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  (  Cbed_rules[,"ASD"]=="88.2" 
                              & (  Cbed_rules[,"SSRU"]=="882C" 
                                   | Cbed_rules[,"SSRU"]=="882D"  
@@ -1161,7 +1076,7 @@ fnBaseRules<-function(CSBdata
                                   | Cbed_rules[,"SSRU"]=="882F"
                                   | Cbed_rules[,"SSRU"]=="882G"
                              )
-    ) # end subset
+                            ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1173,10 +1088,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            =  (  CSBdata[,"GAR_Code"] == "883"  
                              & CSBdata[,"GTY_rev"]  == "LLS"      
                              & (CSBdata[,"Flag_CTY_Code"] == "NZL"  | CSBdata[,"Flag_CTY_Code"] == "RUS")
-    ) # end RuleSubset 
+                          ) # end RuleSubset 
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.3"
                             & (Cbed_rules[,"MEASO"]=="EPA") 
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1188,10 +1103,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            =  (  CSBdata[,"GAR_Code"]     == "883"
                              & CSBdata[,"GTY_rev"]      == "LLS"
                              & CSBdata[,"Flag_CTY_Code"]== "KOR"
-    ) # end RuleSubset 
+                          ) # end RuleSubset 
     ,CbedAreaSubset    = ( Cbed_rules[,"ASD"]=="88.3"
                            & (Cbed_rules[,"MEASO"]=="EPA") 
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1203,10 +1118,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "883"
                             & CSBdata[,"GTY_rev"]      == "LLS"
                             & CSBdata[,"Flag_CTY_Code"]== "CHL"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.3"
                             & (Cbed_rules[,"MEASO"]=="EPA") 
-    ) # end subset
+                        ) # end subset
   ))) # end adding rule
   
   ############################
@@ -1221,7 +1136,7 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "88"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="88.1" 
                             & ( Cbed_rules[,"SSRU"]=="881D" 
                                 | Cbed_rules[,"SSRU"]=="881E"
@@ -1230,7 +1145,7 @@ fnBaseRules<-function(CSBdata
                                 | Cbed_rules[,"SSRU"]=="881H"
                                 | Cbed_rules[,"SSRU"]=="881I"
                                 | Cbed_rules[,"SSRU"]=="881J"))  # need to not include northern banks and seamounts
-    )# end subset
+                          )# end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1242,10 +1157,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "881"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "JPN"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    = ( Cbed_rules[,"ASD"]=="88.1"
                            & (Cbed_rules[,"MEASO"]=="EIA") 
-    ) # end subset 
+                         ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
@@ -1257,12 +1172,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "881"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "NZL"
-                            #        & CSBdata[,"TFN"]          ==  3
-                            #        & CSBdata[,"Split_Year"]   
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.1"
                             & (Cbed_rules[,"MEASO"]=="WPA") 
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1274,10 +1187,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "881"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
-    ) # end RuleSubset  
+                         ) # end RuleSubset  
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.1"
                             & (Cbed_rules[,"MEASO"]=="WPA") 
-    ) # end subset
+                          ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1289,12 +1202,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            =  (  CSBdata[,"GAR_Code"]     == "882"
                              & CSBdata[,"GTY_rev"]      == "OTM"
                              & CSBdata[,"Flag_CTY_Code"]== "JPN"
-                             #        & CSBdata[,"TFN"]          ==  6
-                             #        & CSBdata[,"Split_Year"]   
-    ) # end RuleSubset 
+                           ) # end RuleSubset 
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.2"
                             & (Cbed_rules[,"MEASO"]=="WPA") 
-    ) # end subset
+                           ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1306,10 +1217,10 @@ fnBaseRules<-function(CSBdata
     ,Subset            = (  CSBdata[,"GAR_Code"]     == "882"
                             & CSBdata[,"GTY_rev"]      == "OTM"
                             & CSBdata[,"Flag_CTY_Code"]== "SUN"
-    ) # end RuleSubset  
+                           ) # end RuleSubset  
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.2"
                             & (Cbed_rules[,"MEASO"]=="WPA") 
-    ) # end subset
+                           ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
@@ -1320,10 +1231,10 @@ fnBaseRules<-function(CSBdata
     ,ASDstatArea       = 88
     ,Subset            = (  CSBdata[,"GAR_Code"] == "883"  
                             & CSBdata[,"GTY_rev"]  == "OTM"      
-    ) # end RuleSubset  
+                          ) # end RuleSubset  
     ,CbedAreaSubset    =  ( Cbed_rules[,"ASD"]=="88.3"
                             & (Cbed_rules[,"MEASO"]=="EPA") 
-    ) # end subset
+                           ) # end subset
   ))) # end adding rule
   return(BaseRules)  
 } # end function fnBaseRules
