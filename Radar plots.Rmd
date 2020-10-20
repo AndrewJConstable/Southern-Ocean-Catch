@@ -1,0 +1,113 @@
+---
+title: "Radar Plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(fmsb)
+library(scales)
+
+
+AxisMin<-0
+AxisMax<-1
+AxisSegments<-5
+
+df<-data.frame(RKR = c(rep("RKR01",3),rep("RKR02",3),rep("RKR03",3))
+              ,Obs = rep(c("Tolerable","2020","2050"),3)
+              ,D1  = c(0.5,0.1,0.2,0.7,0.3,0.3,0.2,0.4,0.3)
+              ,D2  = c(0.7,0.5,0.2,0.3,0.4,0.2,0.6,0.3,0.7)
+              ,D3  = c(0.2,0.3,0.4,0.6,0.9,0.9,0.4,0.6,0.4)
+              ,D4  = c(0.8,0.3,0.5,0.6,0.5,0.5,0.3,0.4,0.3)
+              ,D5  = c(0.1,0.1,0.1,0.5,0.2,0.1,0.3,0.4,0.2)
+               ) # end data frame
+
+
+Colour_fill<-c(scales::alpha("green",0.1)  # transparency level
+              ,scales::alpha("white",0.7)  # cut out the intolerable level
+              ,scales::alpha("orange",0.1)
+              ,scales::alpha("blue",0.1)
+              ) # end fill
+
+Colour_line<-c(scales::alpha("darkgreen",0)
+              ,scales::alpha("darkgreen",0.9)
+              ,scales::alpha("darkorange",0.9)
+              ,scales::alpha("darkblue",0.9)
+              ) # end fill
+
+selectDF<-"RKR01"
+pdf<-df[which(df[,"RKR"] %in% selectDF),c("D1","D2","D3","D4","D5")]
+pdfNames<-c("",df[which(df[,"RKR"] %in% selectDF),"Obs"])
+
+Dimensions<-ncol(pdf)
+pdf <- rbind(rep(AxisMax, Dimensions)
+            ,rep(AxisMin, Dimensions)
+            ,rep(1,Dimensions) # background colour for acceptable
+            ,pdf # layers
+            ) #
+
+radarchart(pdf, 
+          ,seg = AxisSegments   # Number of axis segments
+          ,title = selectDF
+          ,pcol = Colour_line,
+          ,pfcol = Colour_fill
+          ,plwd = 2)
+
+# Add a legend
+legend(x=1.15, 
+      ,y=1.35, 
+      ,legend = pdfNames
+      ,bty = "n", pch=20 , col = Colour_line, cex = 1.05, pt.cex = 1.5)
+
+selectDF<-"RKR02"
+pdf<-df[which(df[,"RKR"] %in% selectDF),c("D1","D2","D3","D4","D5")]
+pdfNames<-c("",df[which(df[,"RKR"] %in% selectDF),"Obs"])
+
+Dimensions<-ncol(pdf)
+pdf <- rbind(rep(AxisMax, Dimensions)
+            ,rep(AxisMin, Dimensions)
+            ,rep(1,Dimensions) # background colour for acceptable
+            ,pdf # layers
+            ) #
+
+radarchart(pdf, 
+          ,seg = AxisSegments   # Number of axis segments
+          ,title = selectDF
+          ,pcol = Colour_line,
+          ,pfcol = Colour_fill
+          ,plwd = 2)
+
+# Add a legend
+legend(x=1.15, 
+      ,y=1.35, 
+      ,legend = pdfNames
+      ,bty = "n", pch=20 , col = Colour_line, cex = 1.05, pt.cex = 1.5)
+
+selectDF<-"RKR03"
+pdf<-df[which(df[,"RKR"] %in% selectDF),c("D1","D2","D3","D4","D5")]
+pdfNames<-c("",df[which(df[,"RKR"] %in% selectDF),"Obs"])
+
+Dimensions<-ncol(pdf)
+pdf <- rbind(rep(AxisMax, Dimensions)
+            ,rep(AxisMin, Dimensions)
+            ,rep(1,Dimensions) # background colour for acceptable
+            ,pdf # layers
+            ) #
+
+radarchart(pdf, 
+          ,seg = AxisSegments   # Number of axis segments
+          ,title = selectDF
+          ,pcol = Colour_line,
+          ,pfcol = Colour_fill
+          ,plwd = 2)
+
+# Add a legend
+legend(x=1.15, 
+      ,y=1.35, 
+      ,legend = pdfNames
+      ,bty = "n", pch=20 , col = Colour_line, cex = 1.05, pt.cex = 1.5)
+
+
+
+```

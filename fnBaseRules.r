@@ -5,7 +5,7 @@ fnBaseRules<-function(CSBdata
   BaseRules<-NULL
   
   ############################
-  # 48.3
+  # 48
   ############################
   
   BaseRules<-c(BaseRules,list(list( # start adding rule
@@ -473,53 +473,137 @@ fnBaseRules<-function(CSBdata
   
   ##############################################################################################
   BaseRules<-c(BaseRules,list(list( # start adding rule
-    Rule              = "58B5T_G"
+    Rule              = "58B5T_G0"
     ,Description       = "Subareas 58.5 -groundfish"
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 1
     ,Subset            = (  ( CSBdata[,"GAR_Code"] == "585"  
-                              | CSBdata[,"GAR_Code"] == "5851"  
-                              | CSBdata[,"GAR_Code"] == "5852"  
                              ) #
                             & CSBdata[,"TFN"] == 1
                           ) # end RuleSubset  
-    ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
+    ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2" )
                            & Cbed_rules[,"MEASO"]=="CIS"
                           ) # end subset
   ))) # end adding rule
   
   ##############################################################################################
   BaseRules<-c(BaseRules,list(list( # start adding rule
-    Rule              = "58B5T_I"
-    ,Description       = "Subareas 58.5 -icefish"
+    Rule              = "58B5T_G1"
+    ,Description       = "Division 58.5.1 -groundfish"
+    ,ASDstatArea       = 58
+    ,TypeDepthInterval = 1
+    ,Subset            = (  ( CSBdata[,"GAR_Code"] == "5851"  
+                            ) #
+                          & CSBdata[,"TFN"] == 1
+                          ) # end RuleSubset  
+    ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.5.1")
+                           & Cbed_rules[,"MEASO"]=="CIS"
+    ) # end subset
+  ))) # end adding rule
+  
+  ##############################################################################################
+  BaseRules<-c(BaseRules,list(list( # start adding rule
+    Rule              = "58B5T_G2"
+    ,Description       = "Division 58.5.2 -groundfish"
+    ,ASDstatArea       = 58
+    ,TypeDepthInterval = 1
+    ,Subset            = (  ( CSBdata[,"GAR_Code"] == "5852"  
+                            ) #
+                           & CSBdata[,"TFN"] == 1
+                           ) # end RuleSubset  
+    ,CbedAreaSubset    =  ((Cbed_rules[,"ASD"]=="58.5.2")
+                           & Cbed_rules[,"MEASO"]=="CIS"
+    ) # end subset
+  ))) # end adding rule
+  
+  ##############################################################################################
+  BaseRules<-c(BaseRules,list(list( # start adding rule
+    Rule              = "58B5T_I0"
+    ,Description       = "Subarea 58.5 -icefish"
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 2
     ,Subset            =(  ( CSBdata[,"GAR_Code"] == "585"  
-                             | CSBdata[,"GAR_Code"] == "5851"  
-                             | CSBdata[,"GAR_Code"] == "5852"  
                            )
                           & CSBdata[,"TFN"] == 2
                          ) # end RuleSubset   
-    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
+    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
                           & Cbed_rules[,"MEASO"]=="CIS"
                          ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
   BaseRules<-c(BaseRules,list(list( # start adding rule
-    Rule              = "58L5_T"
-    ,Description       = "Subareas 58.5 -toothfish"
+    Rule              = "58B5T_I1"
+    ,Description       = "Division 58.5.1 -icefish"
+    ,ASDstatArea       = 58
+    ,TypeDepthInterval = 2
+    ,Subset            =(  ( CSBdata[,"GAR_Code"] == "5851"  
+                          )
+                          & CSBdata[,"TFN"] == 2
+                          ) # end RuleSubset   
+    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5.1")
+                          & Cbed_rules[,"MEASO"]=="CIS"
+    ) # end subset 
+  ))) # end adding rule
+  
+  ##############################################################################################
+  BaseRules<-c(BaseRules,list(list( # start adding rule
+    Rule              = "58B5T_I2"
+    ,Description       = "Division 58.5.2 -icefish"
+    ,ASDstatArea       = 58
+    ,TypeDepthInterval = 2
+    ,Subset            =(  ( CSBdata[,"GAR_Code"] == "5852"  
+                            )
+                              & CSBdata[,"TFN"] == 2
+                           ) # end RuleSubset   
+    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5.2")
+                          & Cbed_rules[,"MEASO"]=="CIS"
+    ) # end subset 
+  ))) # end adding rule
+  
+  ##############################################################################################
+  BaseRules<-c(BaseRules,list(list( # start adding rule
+    Rule              = "58L5_T0"
+    ,Description       = "Subarea 58.5 -toothfish"
     ,ASDstatArea       = 58
     ,TypeDepthInterval = 3
     ,Subset            = (  ( CSBdata[,"GAR_Code"] == "585"  
-                              | CSBdata[,"GAR_Code"] == "5851"  
-                              | CSBdata[,"GAR_Code"] == "5852"  
-                            )
+                             )
                            & CSBdata[,"TFN"] == 3
                          ) # end RuleSubset  
-    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5" | Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
+    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5.1" | Cbed_rules[,"ASD"]=="58.5.2")
                           & Cbed_rules[,"MEASO"]=="CIS"
                          ) # end subset 
+  ))) # end adding rule
+
+  ##############################################################################################
+  BaseRules<-c(BaseRules,list(list( # start adding rule
+    Rule              = "58L5_T1"
+    ,Description       = "Division 58.5.1 -toothfish"
+    ,ASDstatArea       = 58
+    ,TypeDepthInterval = 3
+    ,Subset            = (  ( CSBdata[,"GAR_Code"] == "5851"  
+                            )
+                          & CSBdata[,"TFN"] == 3
+                          ) # end RuleSubset  
+    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5.1")
+                          & Cbed_rules[,"MEASO"]=="CIS"
+    ) # end subset 
+  ))) # end adding rule
+
+  ##############################################################################################
+  BaseRules<-c(BaseRules,list(list( # start adding rule
+    Rule              = "58L5_T2"
+    ,Description       = "Division 58.5.2 -toothfish"
+    ,ASDstatArea       = 58
+    ,TypeDepthInterval = 3
+    ,Subset            = (  ( CSBdata[,"GAR_Code"] == "5852"  
+                            )
+                           & CSBdata[,"TFN"] == 3
+                           ) # end RuleSubset  
+    ,CbedAreaSubset    = ((Cbed_rules[,"ASD"]=="58.5.2")
+                          & Cbed_rules[,"MEASO"]=="CIS"
+    ) # end subset 
   ))) # end adding rule
   
   ##############################################################################################
