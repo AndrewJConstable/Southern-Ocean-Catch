@@ -1,0 +1,544 @@
+---
+title: "MEASO whale catch statistics"
+author: "Andrew Constable & Mike Double"
+date: "123/10/2020"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_depth: 4
+    fig_caption: yes
+
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(ggplot2)
+library(scales)
+library(png) # for grabbing dimensions of png files
+library(dplyr)
+library(raster)
+library(rgdal)
+library(maptools)
+library(sp)
+library(measoshapes) # from GitHub  remotes::install_github("AustralianAntarcticDivision/measoshapes")
+library(sf)
+library(RColorBrewer)
+library(SOmap)  #remotes::install_github("AustralianAntarcticDivision/SOmap")
+library(geodist)
+library(rgeos)
+library(colorspace)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+
+
+RootDir<-'/Users/andreworca/Desktop/_wAAD/'
+WorkDir<-'/Users/andreworca/Desktop/_wAAD/_d/Catch/whales/'
+
+# Editing and Development Notes:
+#
+# 1. This code is inherited from "MEASO CCAMLR catch data.rmd" which has the basic analyses testing the data.  
+            # The code here strips away the testing routines.
+#
+
+
+source("InputData_whales.R")
+
+# Output flags
+
+printMaps<-TRUE
+plotCatchMaps <- TRUE
+
+SOmapTrimLat<--40
+SOmapFixBreaks<-TRUE
+
+# distribution of catches by which areas
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+
+# periods of years for reporting (decades, quarter-century)
+
+
+ dWhales<-bind_rows(lapply(MEASOareas[,"Code"]
+                        ,function(m,df,measo){
+                           return(cbind(df[df[,"MEASO"]==m,],measo[rep(which(measo[,"Code"] %in% m),sum(df[,"MEASO"]==m)),c("Sector","Zone")]))
+                          },WhaleCatchData,MEASOareas))
+dWhales<-bind_cols(dWhales
+        ,data.frame(Biomass = unlist(lapply(seq(1,nrow(dWhales),1)
+                            ,function(n,df,sp){df[n,"N"]*sp[which(sp[,"Name"] %in% df[n,"Species"]),"Mass"]}
+                            ,dWhales,WhaleSp)))
+        ,data.frame(Group = unlist(lapply(dWhales[,"Species"]
+                            ,function(s,sp){sp[which(sp[,"Name"] %in% s),"Group"]}
+                            ,WhaleSp))))
+
+
+res<-aggregate(dWhales[,"N"],by=list(dWhales[,"Zone"],dWhales[,"Species"]),sum)
+dimnames(res)[[2]]<-c("Zone","Species","N")
+
+
+
+```
+
+
+
+```{r , out.width="70%", fig.cap="*Total catch (N) of different cetaceans in the Southern Ocean 1913-present.", fig.show='hold', fig.align='center', echo=FALSE}
+
+# add zeros for each Fishery*Decade 
+YearGroup<-c(1910,1946,1971,1987)
+Periods<-c("pre-WW2","1945-1970","1970-1986","Moratorium")
+WSp<-unique(WhaleSp[,"Group"])
+
+res<-aggregate(dWhales[,"N"],by=list(dWhales[,"Group"],dWhales[,"Year"]),sum)
+dimnames(res)[[2]]<-c("Species","Year","N")
+res<-bind_cols(data.frame(Period = unlist(lapply(res[,"Year"],function(y,TG,Per){
+              return(Per[sum(TG<y)])
+              },YearGroup,Periods))),res[,c("Species","N")])
+               
+dfWzeros<-do.call(rbind,lapply(seq(1,length(YearGroup),1),function(t,WSg,Per){return(data.frame(Period=rep(Per[t],length(WSg))
+                                                                                              ,Species=WSg
+                                                                                              ,N=rep(0,length(WSg))
+                                                                                              ))},WSp,Periods))
+res<-bind_rows(res,dfWzeros)
+
+res1<-as.data.frame(aggregate(res[,"N"],list(res[,"Period"],res[,"Species"]),sum))
+dimnames(res1)[[2]]<-c("Period","Species","Number")
+
+plotYlog<-TRUE
+
+if(plotYlog){
+  res1[res1[,"Number"]<1,"Number"]<-0.1
+   }
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res1, mapping = (aes(x = factor(res1[,"Period"],levels=Periods), y = res1[,"Number"], fill = factor(res1[,"Species"],levels=WspCodes[,"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Period", y ="Number", fill = "Species",title="Total catch by period for different cetaceans")
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E6)) + annotation_logticks(sides="l")
+p <- p + scale_fill_discrete(name = "Species", breaks=WspCodes[,"Name"],labels = WspCodes[,"Name"],type=WspCodes[,"Colour"]) # change legend labels
+
+p
+
+```
+  
+
+```{r , out.width="70%", fig.cap="*Total biomass of cetaceans caught in different MEASO areas.", fig.show='hold', fig.align='center', echo=FALSE}
+
+res<-aggregate(dWhales[,"Biomass"],by=list(dWhales[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Biomass")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+plotYlog<-FALSE
+
+if(plotYlog){
+  res[res[,"Biomass"]<1,"Biomass"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Biomass"]),"Biomass"])
+minCatch<-min(res[!is.na(res[,"Biomass"]),"Biomass"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Biomass"]/1E6, fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Million Tonnes", fill = "Sector",title="Total cetacean catch by MEASO areas")
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+```
+
+
+  
+```{r , echo=FALSE, eval=FALSE}
+########## Seabed areas #############################################
+
+Seabed_areas <- readRDS(Seabed_file)
+# give each cell an area of 2x2 km until it is available in input file
+Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
+
+# rename variables to be consistent with code
+dimnames(Seabed_areas)[[2]]<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","SSRU","SSMU","Area")
+
+MEASOgrid<-Seabed_areas[!(Seabed_areas[,"Iceshelf"])  & !is.na(Seabed_areas[,"MEASO"])
+                         ,c("Cell","Lon","Lat","MEASO","Area")]
+remove(Seabed_areas)  # free up memory
+
+```
+
+  
+# Biomass
+  
+```{r , echo=FALSE}
+
+includeZeroCatch<-TRUE
+plotYlog<-FALSE
+YtickMajor<-2E3
+YtickMinor<-1E3
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-1E1
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1900,2020)
+
+```
+  
+  
+```{r ,echo=FALSE, eval=FALSE}
+
+WbmsMEASO<-aggregate(dWhales[,"Biomass"],by=list(dWhales[,"MEASO"]),sum)
+dimnames(WbmsMEASO)[[2]]<-c("MEASO","Biomass")
+
+Pixels    <- rep(0,nrow(MEASOgrid))     # generate vector of zeros for N pixels
+
+uMEASO<-unique(WbmsMEASO[,"MEASO"])
+for (m in seq(1,length(uMEASO),1)){
+  cells<-MEASOgrid[,"MEASO"]==uMEASO[m]
+  Area<-sum(MEASOgrid[cells,"Area"])
+  Pixels[cells]<-WbmsMEASO[WbmsMEASO[,"MEASO"]==uMEASO[m],"Biomass"]/Area        
+  }
+
+#prepare catch/pixel for plotting
+PixelsLog10<- Pixels
+PixelsLog10[PixelsLog10==0]<-NA
+
+#populate the cells indexed from the cell column in template 
+r <- template
+r[MEASOgrid$Cell] <- log10(PixelsLog10)
+
+# reduce resolution for plotting if needed
+r_small<-aggregate(r, fact=4)
+
+rgg<-as.data.frame(r_small,xy=2)
+
+
+```
+  
+  
+```{r ,echo=FALSE,eval=FALSE, fig.cap="Total catch of cetaceans from 1913 to the present plotted against ocean depth (bottom left legend) as biomass density (tonnes per square kilometer) on a log10 scale.  Catch densities distributed uniformly across the MEASO areas in which they were caught.  Grey lines show a graticule.  Black lines show the boundaries of the 15 MEASO areas."}
+
+
+######### codePlotCatchMap #################
+# convert rgg$layer to colour
+#col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
+#col_pal<-colorRampPalette(c("gold","yellow","greenyellow","green","red","darkred")) # from brewer, 
+
+if(SOmapFixBreaks){
+  Cmin<- (-2.5)
+  Cmax <- 1
+} else {
+  Cmin <- floor(min(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  Cmax <- ceiling(max(rgg[(!is.nan(rgg$layer) & !is.na(rgg$layer)),"layer"]))
+  } #end fix breaks
+Cn   <- 1000
+#rCols<-col_pal(Cn)
+rCols<-viridis_pal()(Cn)
+rColour<-rep(NA,length(rgg$layer))
+Cvalid<-(!is.nan(rgg$layer) & !is.na(rgg$layer))
+rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
+ticks<-seq(Cmin,Cmax,1)
+
+# now plot
+frame()
+SOmap(graticules=TRUE,graticules_col="grey30"
+      ,trim=SOmapTrimLat
+      #      ,col=NA,border=NA
+      ,land=FALSE
+      ,ice=FALSE
+)
+SOplot(measo_shapes,col=NA,border="black",size=0.25, add=TRUE)
+SOplot(SOmap::SOmap_data$ant_coast_ice
+       ,add=TRUE,col="white",border="grey50",lwd=0.25)
+
+## create a circle
+## distance from south pole to -40
+width <-  geodist::geodist(data.frame(lon=0, lat= -90), data.frame(lon= 0, lat = SOmapTrimLat), measure = "geodesic")
+pContinent<- SOmap::SOmap_data$continent
+
+pContinent <- raster::crop(pContinent, 
+   rgeos::gBuffer(SpatialPoints(cbind(0, -90)), width = width))
+
+SOplot(pContinent, add=TRUE, col="grey90",border="black",lwd=0.25)
+
+SOplot(pContinent,add=TRUE,col="grey90",border="black",lwd=0.25)
+SOplot(r_small,col=rCols
+       ,legend=TRUE
+       ,legend.width=1, legend.shrink=0.75
+       ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
+       , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+#SOleg(c(Cmin,r_small[!is.na(r_small)],Cmax)  # include min and max to fix the colour range
+#      , position = "topright", col = rCols
+#      , ticks = length(ticks)  #breaks=ticks 
+##      ,tlabs = as.character(ticks),#breaks=ticks,
+#      ,trim = (SOmapTrimLat+3)
+##      , ladj = -2
+##      ,lsrt=0
+#      , label = "log10 (t/km2)", type = "continuous")
+
+```
+  
+  
+```{r , echo=FALSE}
+plotYlog<-TRUE
+includeZeroCatch<-FALSE
+
+pdf<-aggregate(dWhales[,"Biomass"],by=list(dWhales[,"MEASO"],dWhales[,"Year"]),sum)
+dimnames(pdf)[[2]]<-c("MEASO","Year","Biomass")
+
+######### codePlotCatchTimeSeries #################
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Biomass"]<1,"Biomass"]<-NA   
+
+maxCatch<-max(pdf[!is.na(pdf[,"Biomass"]),"Biomass"])
+minCatch<-min(pdf[!is.na(pdf[,"Biomass"]),"Biomass"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+pdf$MEASO<-factor(pdf$MEASO,levels = pMareas[,"Code"]) 
+Area<-pdf$MEASO
+
+Xlimits<-c(floor(min(pdf[,"Year"])/10)*10,ceiling(max(pdf[,"Year"])/10)*10)
+
+```
+
+```{r , echo=FALSE, eval=FALSE, fig.cap="Time series of catches (biomass) of all cetaceans in each of the MEASO areas."}
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf, mapping = (aes(x = pdf[,"Year"], y = pdf[,"Biomass"], col = Area, lty = Area)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for cetaceans in MEASO areas")
+
+p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"Col"])
+
+p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
+p
+
+
+
+```
+  
+```{r , echo=FALSE, fig.cap="Time series of catches (biomass) of all cetaceans in the Northern Zone"}
+plotYlog<-FALSE
+plotIndependently<-TRUE
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]=="Northern","Code"],]
+
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]=="Northern","Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]=="Northern","Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Biomass"]),"Biomass"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Biomass"]),"Biomass"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Year"], y = pdf_Z[,"Biomass"], col = Sector)), show.legend=TRUE)
+
+factor(res[,"Zone"],levels=MEASOzones[,"Name"])
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for cetaceans in the Northern Zone")
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+
+
+```
+
+
+```{r , echo=FALSE, fig.cap="Time series of catches (biomass) of all cetaceans in the Subantarctic Zone"}
+plotYlog<-FALSE
+plotIndependently<-TRUE
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]=="Subantarctic","Code"],]
+
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]=="Subantarctic","Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]=="Subantarctic","Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Biomass"]),"Biomass"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Biomass"]),"Biomass"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Year"], y = pdf_Z[,"Biomass"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for cetaceans in the Subantarctic Zone")
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+
+
+```
+
+```{r , echo=FALSE, fig.cap="Time series of catches (biomass) of all cetaceans in the Antarctic Zone"}
+plotYlog<-FALSE
+plotIndependently<-TRUE
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]=="Antarctic","Code"],]
+
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]=="Antarctic","Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]=="Antarctic","Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Biomass"]),"Biomass"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Biomass"]),"Biomass"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Year"], y = pdf_Z[,"Biomass"], col = Sector)), show.legend=TRUE)
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for cetaceans in the Antarctic Zone")
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+
+
+```
