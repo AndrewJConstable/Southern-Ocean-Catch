@@ -97,21 +97,21 @@ Depth_intervals<-data.frame("DepthRange" = c("Groundfish","Icefish","Toothfish",
                             ,"Maximum"    = c(-600,-700,-1800,-500,-10000,-4000,-10000,-800,-1000)
 )# end data frame
 MEASOareas<-as.data.frame(matrix(c(
- "01","AOA","Atlantic Ocean","Antarctic",            "48",     "black","dashed"          
-,"02","AOS","Atlantic Ocean","Subantarctic",         "48",     "black","solid" 
-,"03","AON","Atlantic Ocean","Northern",             "48",     "black","longdash"
+ "01","AOA","Atlantic",      "Antarctic",            "48",     "black","dashed"          
+,"02","AOS","Atlantic",      "Subantarctic",         "48",     "black","solid" 
+,"03","AON","Atlantic",      "Northern",             "48",     "black","longdash"
 ,"04","CIA","Central Indian","Antarctic",            "58",   "sienna2","dashed"
 ,"05","CIS","Central Indian","Subantarctic",         "58",   "sienna2","solid" 
 ,"06","CIN","Central Indian","Northern",             "58",   "sienna2","longdash"
-,"07","EIA","East Indian   ","Antarctic",            "58",    "green4","dashed"
-,"08","EIS","East Indian   ","Subantarctic",    "Outside",    "green4","solid"
-,"09","EIN","East Indian   ","Northern",        "Outside",    "green4","longdash"
-,"10","EPA","East Pacific  ","Antarctic",            "48",      "red3","dashed"
-,"11","EPS","East Pacific  ","Subantarctic",         "48",      "red3","solid"
-,"12","EPN","East Pacific  ","Northern",        "Outside",      "red3","longdash"
-,"13","WPA","West Pacific  ","Antarctic",            "88",     "blue2","dashed"
-,"14","WPS","West Pacific  ","Subantarctic",    "Outside",     "blue2","solid"
-,"15","WPN","West Pacific  ","Northern",        "Outside",     "blue2","longdash"
+,"07","EIA","East Indian",   "Antarctic",            "58",    "green4","dashed"
+,"08","EIS","East Indian",   "Subantarctic",    "Outside",    "green4","solid"
+,"09","EIN","East Indian",   "Northern",        "Outside",    "green4","longdash"
+,"10","WPA","West Pacific",  "Antarctic",            "88",     "blue2","dashed"
+,"11","WPS","West Pacific",  "Subantarctic",    "Outside",     "blue2","solid"
+,"12","WPN","West Pacific",  "Northern",        "Outside",     "blue2","longdash"
+,"13","EPA","East Pacific",  "Antarctic",            "48",      "red3","dashed"
+,"14","EPS","East Pacific",  "Subantarctic",         "48",      "red3","solid"
+,"15","EPN","East Pacific",  "Northern",        "Outside",      "red3","longdash"
 ,"16","Outside","not in MEASO area","","","",""),byrow=TRUE,ncol=7))
 MEASOareas<-bind_cols(Order = seq(1,nrow(MEASOareas),1),MEASOareas)
 dimnames(MEASOareas)[[2]]<-c("Order","chOrder","Code","Sector","Zone","CSB_Stat_Area","Col","LTY")

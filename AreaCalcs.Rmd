@@ -33,7 +33,7 @@ FileRdata_proportions<-"ASD_depth_propInMEASOareas.rds"
 SaveRdata_areas<-FALSE
 FileRdata_areas<-"ASD_depth_AreaInMEASOareas.rds"
 
-Seabed_file<-"C:\\_w\\_d\\seabed GEBCO\\GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
+Seabed_file<-"/Users/andreworca/Desktop/_w/_d/seabed\ GEBCO/GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
 
 CompareWithCCAMLR<-FALSE
 

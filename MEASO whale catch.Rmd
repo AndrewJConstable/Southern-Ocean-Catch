@@ -49,6 +49,8 @@ source("InputData_whales.R")
 printMaps<-TRUE
 plotCatchMaps <- TRUE
 
+PlotToFile<-TRUE
+
 SOmapTrimLat<--40
 SOmapFixBreaks<-TRUE
 
@@ -122,6 +124,7 @@ if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 
 p <- p + scale_fill_discrete(name = "Species", breaks=WspCodes[,"Name"],labels = WspCodes[,"Name"],type=WspCodes[,"Colour"]) # change legend labels
 
 p
+if(PlotToFile) ggsave("Whale_catch_species_total_N.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -176,6 +179,8 @@ p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"
 p <- p + labs(x = "Zone", y ="Million Tonnes", fill = "Sector",title="Total cetacean catch by MEASO areas")
 if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
 p
+
+if(PlotToFile) ggsave("Whale_catch_MEASO_areas_Tonnes.tiff",width=15,height=10,units="cm")
 
 ```
 
@@ -387,6 +392,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Whale_catch_MEASO_areas_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -439,6 +445,7 @@ p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for ce
 p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
 p
 
+if(PlotToFile) ggsave("Whale_catch_MEASO_Northern_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -490,6 +497,7 @@ p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for ce
 p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
 p
 
+if(PlotToFile) ggsave("Whale_catch_MEASO_Subantarctic_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -539,6 +547,7 @@ p <- p + labs(x = "Year", y ="Catch (tonnes)", title="Total biomass catch for ce
 p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
 p
 
+if(PlotToFile) ggsave("Whale_catch_MEASO_Antarctic_TS.tiff",width=15,height=10,units="cm")
 
 
 ```

@@ -29,7 +29,7 @@ fnDistributeDepVar<-function(c        # integer for rule for distributing the de
         #####################################
         if(length(mDV[!is.na(mDV)])>0) {
           DV<-aggregate(mDV,by=ByVar,sum,na.rm=TRUE)
-          } else {
+        } else {
           DV<-matrix(unique(sD),ncol=length(KeepVars))
           DV<-cbind(DV,rep(NA,nrow(DV)))
           }

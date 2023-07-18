@@ -33,8 +33,11 @@ library(colorspace)
 knitr::opts_chunk$set(echo = TRUE)
 
 
-RootDir<-'/Users/andreworca/Desktop/_wAAD/'
-WorkDir<-'/Users/andreworca/Desktop/_wAAD/_d/Catch/'
+#RootDir<-'/Users/andreworca/Desktop/_wAAD/'
+#WorkDir<-'/Users/andreworca/Desktop/_wAAD/_d/Catch/'
+
+RootDir<-'/Volumes/iMaWizard/'
+WorkDir<-'/Volumes/iMaWizard/_w/_d/Catch/'
 
 # Editing and Development Notes:
 #
@@ -51,6 +54,8 @@ printMaps<-TRUE
 plotCatchMaps <- TRUE
 plotToothfish<-TRUE
 addIUU<-TRUE
+
+PlotToFile<-TRUE
 
 SOmapTrimLat<--40
 SOmapFixBreaks<-TRUE
@@ -72,6 +77,10 @@ source("fnBaseRules.R") # the rules for dividing ASD catch and effort between ME
 source("fnCatch_summary.R")
 source("fnDepthArea.R")
 source("fnCalcMEASO_TimeSeries.R")
+source("fnSetupCatchDistRule.R")
+source("fnCatchDistRule.R")
+source("fnPropInMareaForRule.R")
+
 
 fnYmax<-function(m){# m is the maximum catch
   om<-floor(log10(m)) # order of magnitude
@@ -276,6 +285,8 @@ p <- p + scale_fill_discrete(name = "Fishery", breaks=levels(factor(res[,"Fisher
 
 p
 
+if(PlotToFile) ggsave("Catch_Fishery_Decade.tiff",width=15,height=10,units="cm")
+
 ```
   
 ### Gear Type  
@@ -434,6 +445,8 @@ p <- p + scale_fill_discrete(name = "Gear", breaks=levels(factor(res[,"Gear"]))
 p
 } # end if plotGearTypeRev
 
+if(PlotToFile) ggsave("Catch_Gear_Type_Decade.tiff",width=15,height=10,units="cm")
+
 ```
   
 
@@ -581,7 +594,7 @@ p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                               fill = Records))
 p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Records"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -590,6 +603,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Scientific Papers", fill = "Records")
 p
+
+if(PlotToFile) ggsave("Scientific_Papers_State.tiff",width=15,height=10,units="cm")
 
 ```
 
@@ -615,95 +630,6 @@ dfcombo<-CSBdata[CSBdata[,"Catch_TXN_Code"] %in% c("WIC"),]
 
 ```{r DCfunctions,echo=FALSE}
 
-fnPropInMareaForRule<-function(cbed_a            # data frame - with Grouping variables,"Depth","Area".
-                                                 # Grouping variables will be either or both "MEASO", "ASD"
-
-                               ,Groups           # which of MEASO and ASD to use
-                               ,MEASO             # MEASO area names in order
-                               ,ASD               # ASD names in order
-                               ){ # start function    
-  
-  if(!is.null(cbed_a)) cbed_a[,"Area"] <- cbed_a[,"Area"]/sum(cbed_a[,"Area"])
-
-  if(length(Groups)==2){
-          dASD<-unique(cbed_a[,"ASD"])
-          res<-bind_rows(lapply(seq(1,length(dASD),1)
-                        ,function(a,df,asd,measo){
-                            r<-as.data.frame(matrix(0,ncol=length(measo),nrow=1
-                                              ,dimnames=list(asd[a],measo)))
-                            if(!is.null(df)) {
-                                 r[,match(df[df[,"ASD"]==asd[a],"MEASO"],measo)]<-
-                                             round(df[df[,"ASD"]==asd[a],"Area"],3)
-                            } # end if                       
-                            return(r)
-                          },cbed_a,dASD,MEASO))
-          ASDzero<-ASD[-match(dimnames(res)[[1]],ASD)]
-          resZero<-as.data.frame(matrix(0,ncol=length(MEASO),
-                       nrow=length(ASDzero),dimnames=list(ASDzero,MEASO)))
-          res<-bind_rows(res,resZero)
-          res<-res[order(dimnames(res)[[1]]),]
-  } else {
-    if(Groups[1]=="MEASO"){
-          res<-as.data.frame(matrix(0,ncol=length(MEASO)
-                                    ,nrow=1,dimnames=list(NULL,MEASO)))
-        if(!is.null(cbed_a)) {
-          res[1,match(cbed_a[,"MEASO"],MEASO)]<-round(cbed_a[,"Area"],3)
-        } # end if
-    } else {
-    if(Groups[1]=="ASD"){
-          res<-as.data.frame(matrix(0,ncol=1,nrow=length(ASD),dimnames=list(ASD,"Prop")))
-        if(!is.null(cbed_a)) {
-          res[match(cbed_a[,"ASD"],ASD),1]<-round(cbed_a[,"Area"],3)
-        } # end if
-    } else stop("neither MEASO or ASD present in data") 
-      } # end else MEASO
-  } #end else groups==2
-  
-     return(res) # data frame with ASD rows and MEASO columns (eached named accordingly)
-     } # end fnPropInMarea
-
-fnSetupCatchDistRules<-function(CSBdata
-                               ,Depth_intervals
-                               ,Cbed_rules
-                               ,AreaGroups
-                               ,MEASO
-                               ,ASD
-                               ){
-  
-     BaseRules<-fnBaseRules(CSBdata
-                           ,Cbed_rules
-                           )# end fn call
-  
-     CatchDistRules <- lapply( BaseRules
-                              ,fnCatchDistRule
-                              ,Depth_intervals
-                              ,Cbed_rules
-                              ,AreaGroups
-                              ,MEASO
-                              ,ASD
-                              )# end lapply
-     return(CatchDistRules)  
-     } # end fnSetupCatchDistRules
-  
-
-fnCatchDistRule<-function(BaseRule,DI,CBa,Agroups,MEASO,ASD){
-
-  BaseRule<-c(BaseRule,list(Area_km2    = 0))
-  BaseRule$CbedAreaSubset<-(BaseRule$CbedAreaSubset 
-                            & (CBa[,"Depth"] <  DI[BaseRule$TypeDepthInterval,"Minimum"]
-                             & CBa[,"Depth"] >= DI[BaseRule$TypeDepthInterval,"Maximum"]))
-
-  dfAreas<-fnDepthArea(BaseRule$TypeDepthInterval
-                             ,DI
-                             ,CBa[BaseRule$CbedAreaSubset,c(Agroups,"Depth","Area")])
-        
-  BaseRule<-c(BaseRule,list(Distribution = fnPropInMareaForRule(dfAreas,Agroups,MEASO,ASD)))
-  
-  if(!is.null(dfAreas)) BaseRule$Area_km2 <- sum(dfAreas[,"Area"])
-
-        return(BaseRule)
-      } # end function
-
 
 fnDistributeCatch<-function(c,CD,dCSB){
            subCSB<-dCSB[CD[[c]]$Subset,]
@@ -711,8 +637,6 @@ fnDistributeCatch<-function(c,CD,dCSB){
            rule<-as.data.frame(matrix(CD[[c]]$Rule,ncol=1,nrow=nrow(subCSB),dimnames=list(NULL,"Rule")))
            return(bind_cols(subCSB,rule,res))
            }
-
-
 ```
 
 
@@ -1112,7 +1036,12 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Toothfish_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1139,6 +1068,8 @@ SOplot(r_small,col=rCols
        ,legend.width=1, legend.shrink=0.75
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+if(PlotToFile) dev.off()
 
 #SOleg(c(Cmin,r_small[!is.na(r_small)],Cmax)  # include min and max to fix the colour range
 #      , position = "topright", col = rCols
@@ -1215,6 +1146,7 @@ p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASO
 p
 
 
+if(PlotToFile) ggsave("Catch_Toothfish_TS.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -1257,11 +1189,12 @@ World$id<-as.numeric(World$OBJECTID)
 mapWorld_pts<- fortify(World, region = "id")
 mapWorld<-merge(mapWorld_pts,World,by="id")
 
+
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -1270,6 +1203,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Total accumulated Toothfish Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
+
+if(PlotToFile) ggsave("Catch_Toothfish_Flag_State.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -1397,7 +1332,7 @@ kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,ca
 
 ######### codePlotCatchMap #################
 # convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
 if(SOmapFixBreaks){
   Cmin<- (-9)
@@ -1414,7 +1349,13 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Groundfish_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1442,6 +1383,7 @@ SOplot(r_small,col=rCols
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
 
+if(PlotToFile) dev.off()
 
 ```
   
@@ -1507,6 +1449,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Catch_Groundfish_TS.tiff",width=15,height=10,units="cm")
 
 
 ``` 
@@ -1554,9 +1497,9 @@ mapWorld<-merge(mapWorld_pts,World,by="id")
 
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -1565,6 +1508,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Total accumulated groundfish Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
+
+if(PlotToFile) ggsave("Catch_Groundfish_Flag_State.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -1694,7 +1639,7 @@ kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,ca
 
 ######### codePlotCatchMap #################
 # convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
 if(SOmapFixBreaks){
   Cmin<- (-9)
@@ -1711,7 +1656,13 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Grenadier_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -1738,6 +1689,9 @@ SOplot(r_small,col=rCols
        ,legend.width=1, legend.shrink=0.75
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+if(PlotToFile) dev.off()
+
 
 ```
   
@@ -1803,6 +1757,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Catch_Grenadiers_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -1849,9 +1804,9 @@ mapWorld<-merge(mapWorld_pts,World,by="id")
 
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -1860,6 +1815,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Total accumulated grenadier Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
+
+if(PlotToFile) ggsave("Catch_Grenadiers_Flag_State.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -1990,7 +1947,7 @@ kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,ca
 ######### codePlotCatchMap #################
 ######### codePlotCatchMap #################
 # convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
 if(SOmapFixBreaks){
   Cmin<- (-9)
@@ -2007,7 +1964,13 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Skates_Rays_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2034,6 +1997,9 @@ SOplot(r_small,col=rCols
        ,legend.width=1, legend.shrink=0.75
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+if(PlotToFile) dev.off()
+
 ```
   
   
@@ -2098,6 +2064,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Catch_Skates_Rays_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -2144,9 +2111,9 @@ mapWorld<-merge(mapWorld_pts,World,by="id")
 
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -2155,6 +2122,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Total accumulated skates and rays Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
+
+if(PlotToFile) ggsave("Catch_Skates_Rays_Flag_State.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -2282,7 +2251,7 @@ kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,ca
 ######### codePlotCatchMap #################
 ######### codePlotCatchMap #################
 # convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
 if(SOmapFixBreaks){
   Cmin<- (-9)
@@ -2299,7 +2268,13 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Icefish_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2326,6 +2301,8 @@ SOplot(r_small,col=rCols
        ,legend.width=1, legend.shrink=0.75
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+if(PlotToFile) dev.off()
 
 ```
   
@@ -2391,6 +2368,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Catch_Icefish_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -2436,9 +2414,9 @@ mapWorld<-merge(mapWorld_pts,World,by="id")
 
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -2447,6 +2425,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Total accumulated icefish Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
+
+if(PlotToFile) ggsave("Catch_Icefish_Flag_State.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -2571,7 +2551,7 @@ kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,ca
 ######### codePlotCatchMap #################
 ######### codePlotCatchMap #################
 # convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
 if(SOmapFixBreaks){
   Cmin<- (-9)
@@ -2588,7 +2568,13 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Mesopelagics_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2615,6 +2601,8 @@ SOplot(r_small,col=rCols
        ,legend.width=1, legend.shrink=0.75
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+if(PlotToFile) dev.off()
 
 ```
   
@@ -2680,6 +2668,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Catch_Mesopelagic_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -2725,9 +2714,9 @@ mapWorld<-merge(mapWorld_pts,World,by="id")
 
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -2736,6 +2725,8 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
                ,axis.title=element_blank())
 p <- p + labs(title="Total accumulated mesopelagic fish Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
+
+if(PlotToFile) ggsave("Catch_Mesopelagic_Flag_State.tiff",width=15,height=10,units="cm")
 
 ```
   
@@ -2857,7 +2848,7 @@ kable(dfTaxa[!is.na(dfTaxa[,"Code"]),],format="simple",align="l",row.names=NA,ca
 ######### codePlotCatchMap #################
 ######### codePlotCatchMap #################
 # convert rgg$layer to colour
-col_pal<-colorRampPalette(c("gold","greenyellow","green3","red")) # from brewer
+col_pal<-colorRampPalette(c("gold","greenyellow","green","green2","red","darkred")) # from brewer, 
 
 if(SOmapFixBreaks){
   Cmin<- (-9)
@@ -2874,7 +2865,13 @@ rColour[Cvalid]<-rCols[ceiling((rgg$layer[Cvalid]-Cmin)/(Cmax-Cmin)*Cn)]
 ticks<-seq(Cmin,Cmax,1)
 
 # now plot
-frame()
+if(PlotToFile) {
+  tiff("Catch_Krill_map.tiff",width = 15,height = 10, units = "cm", res=300)
+} else {
+  frame()
+}
+
+
 SOmap(graticules=TRUE,graticules_col="grey30"
       ,trim=SOmapTrimLat
       #      ,col=NA,border=NA
@@ -2901,6 +2898,9 @@ SOplot(r_small,col=rCols
        ,legend.width=1, legend.shrink=0.75
        ,legend.args=list(text='log10(Tonnes.km-2)', side=4, font=2, line=2.5, cex=0.8)
        , zlim=c(Cmin,Cmax),add=TRUE)#, breaks=ticks)
+
+if(PlotToFile) dev.off()
+
 ```
   
   
@@ -2965,6 +2965,7 @@ p<-p + scale_colour_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOar
 p<-p + scale_linetype_manual(values=MEASOareas[match(unique(pdf[,"MEASO"]),MEASOareas[,"Code"]),"LTY"])
 p
 
+if(PlotToFile) ggsave("Catch_Krill_TS.tiff",width=15,height=10,units="cm")
 
 
 ```
@@ -3009,11 +3010,13 @@ World$id<-as.numeric(World$OBJECTID)
 mapWorld_pts<- fortify(World, region = "id")
 mapWorld<-merge(mapWorld_pts,World,by="id")
 
+
 p <- ggplot(data = mapWorld, aes(x=long, y=lat, group = group,
                                  fill = Catch))
-p<-p+geom_polygon() + scale_fill_continuous(type="gradient")
+
+p<-p+geom_polygon() + scale_fill_viridis_c(direction = -1)
 p<-p+geom_polygon(data=mapWorld[is.na(mapWorld[,"Catch"]),],mapping=aes(x=long,y=lat),fill="grey90")
-p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="lightgoldenrod1")
+p<-p+geom_polygon(data=mapWorld[mapWorld[,"CNTRY_NAME"]=="Antarctica",],mapping=aes(x=long,y=lat),fill="grey90")
 p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
                ,panel.background = element_blank()
                , axis.line = element_blank()
@@ -3023,9 +3026,10 @@ p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_bl
 p <- p + labs(title="Total accumulated Krill Catch by Flag State", fill = "Catch (,000 tonnes)")
 p
 
+if(PlotToFile) ggsave("Catch_Krill_Flag_State.tiff",width=15,height=10,units="cm")
+
 ```
   
-  
-  
+ 
 # References    
 .     

@@ -1,0 +1,2568 @@
+---
+title: "MEASO fishery summary for Local Drivers Paper"
+author: "Andrew Constable"
+date: "24/10/2020"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_depth: 4
+    fig_caption: yes
+
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(ggplot2)
+library(scales)
+library(png) # for grabbing dimensions of png files
+library(dplyr)
+library(raster)
+library(rgdal)
+library(maptools)
+library(sp)
+library(measoshapes) # from GitHub  remotes::install_github("AustralianAntarcticDivision/measoshapes")
+library(sf)
+library(RColorBrewer)
+library(SOmap)  #remotes::install_github("AustralianAntarcticDivision/SOmap")
+library(geodist)
+library(rgeos)
+library(colorspace)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+
+
+RootDir<-'/Users/andreworca/Desktop/_wAAD/'
+WorkDir<-'/Users/andreworca/Desktop/_wAAD/_d/Catch/'
+
+# Editing and Development Notes:
+#
+# 1. This code is inherited from "MEASO CCAMLR catch data.rmd" which has the basic analyses testing the data.  
+            # The code here strips away the testing routines.
+#
+
+
+source("InputData.R")
+
+# Output flags
+
+plotToothfish<-TRUE
+addIUU<-TRUE
+
+PlotToFile<-TRUE
+
+# distribution of catches by which areas
+
+AreaGroups<-c("MEASO")  # add ASD if need both
+
+
+# decades for reporting
+
+decade<-seq(1960,2010,10)
+
+
+
+################# load functions #####################
+
+source("fnBaseRules.R") # the rules for dividing ASD catch and effort between MEASO areas
+source("fnCatch_summary.R")
+source("fnDepthArea.R")
+source("fnCalcMEASO_TimeSeries.R")
+source("fnSetupCatchDistRule.R")
+source("fnCatchDistRule.R")
+source("fnPropInMareaForRule.R")
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+```
+
+
+```{r ,echo=FALSE}
+# CSBdata is the main data frame with catch records
+
+CC_Season<-CSBdata[,"Calendar_Year"]
+NextYear<-!is.na(CSBdata[,"Month"]) & CSBdata[,"Month"]>11
+CC_Season[NextYear]<-CC_Season[NextYear]+1
+Split_Year<-CSBdata[,"Calendar_Year"]
+NextYear<-!is.na(CSBdata[,"Month"]) & CSBdata[,"Month"]>6
+Split_Year[NextYear]<-Split_Year[NextYear]+1
+CSBdata<-cbind(CSBdata,CC_Season,Split_Year)
+
+
+########################################################################
+# modify records to enable use of rules to assign catches to MEASO areas
+
+# NOTE - IF RECORDS ARE MODIFIED TO CHANGE GROUP - MAKE CHANGES IN "B-M Step1.CSV" OR "B-M Step2.CSV" AS REQUIRED 
+
+########
+# Case 1: SUN catch in Area 58 in years 1978, 1979.  Has Antarctic krill and Subantarctic fish species. Reassign krill to 
+# midwater trawl (not bottom trawl) and krill fishery rather than groundfish fishery
+
+dfSelect <- (CSBdata[,"Flag_CTY_Code"]=="SUN" 
+          & CSBdata[,"GAR_Code"]=="58" 
+          & (CSBdata[,"Calendar_Year"]=="1978" | CSBdata[,"Calendar_Year"]=="1979")
+          & CSBdata[,"Catch_TXN_Code"]== "KRI")
+CSBdata[dfSelect,"Target_TXN_Code"] <- "KRI"  # for krill fishery
+
+
+# Added records to "B-M Step2.csv"  :  
+#            OT  SUN  7  58  1978  M
+#            OT  SUN  7  58  1979  M
+
+```
+
+
+```{r TargetGroups, echo=FALSE}
+
+TargetFishery<-CSB_taxa[unique(match(CSBdata[,"Target_TXN_Code"],CSB_taxa[,"TXN_Code"])),]
+TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     8,     1,     7,     6,      1,    2,     1 
+                                            ,    6,     1,     5,     9,     1,     2)
+                         ,TXN_Code = c( "TOT", "ANI", "SQS", "MZZ", "KRI", "LXX", "NOX", "ICX", "NOG"
+                                            ,"ELC", "GHP", "ANS", "KCX", "NOS", "WIC")
+                         ,DepthRange = c("600-1800m", "100-700m", "Pelagic", "-", "Pelagic", "Pelagic", "0-500m", "100-650", "0-500m"
+                                            ,"Pelagic", "150-350m", "0-700m", "200-1500m", "0-600m", "100-650m")
+                          ) # end data frame
+TF_Plot_Order<-TF_Plot_Order[order(TF_Plot_Order[,"TFn"]),]
+
+printTF<-data.frame(Fishery    = TF_Names[match(TF_Plot_Order[,"TFn"],TF_Names[,"TFn"]),"Fishery"]
+                   ,TaxonCode  = TF_Plot_Order[,"TXN_Code"]
+                   ,TaxonName  = CSB_taxa[match(TF_Plot_Order[,"TXN_Code"],CSB_taxa[,"TXN_Code"]),"TXN_Name"]
+                   ,Depth      = TF_Plot_Order[,"DepthRange"]
+                   ) # end df
+
+# create vector to be added to CSBdata for the Target fishery for each record
+
+Fishery_type<-TF_Plot_Order[match(CSBdata[,"Target_TXN_Code"],TF_Plot_Order[,"TXN_Code"]),"TFn"]  # plot by number of Target Fishery to get right order 
+
+CSBdata<-cbind(CSBdata,Fishery_type)
+dimnames(CSBdata)[[2]][length(names(CSBdata))]<-"TFN"
+```
+
+
+  
+```{r TargetFisheries, out.width="70%", fig.cap="*Total catch (tonnes, all taxa) in each major fishery in the CCAMLR area in each decade from the 1960s to the present, derived from the CCAMLR Statistical Bulletin 2019*", fig.show='hold', fig.align='center', echo=FALSE}
+
+# add zeros for each Fishery*Decade 
+
+decade<-seq(1960,2010,10)
+TFzeros<-do.call(rbind,lapply(seq(1,length(decade),1),function(t,decade,TFn){return(data.frame(Decade=rep(decade[t],length(TFn))
+                                                                                              ,Fishery=TFn
+                                                                                              ,Tonnes=rep(0,length(TFn))
+                                                                                              ))},decade,TF_Names[,"TFn"]))
+
+res1<-data.frame(Decade=10*(floor(CSBdata[,"Calendar_Year"]/10))
+                ,Fishery=CSBdata[,"TFN"]
+                ,Tonnes = CSBdata[,"Green_Weight"])
+res1<-rbind(res1,TFzeros)
+
+# add IUU catch if wanted
+
+if(addIUU){
+  res1_IUU<-data.frame(Decade=10*(floor(Toothfish_IUU[,"Year"]/10))
+                      ,Fishery=rep(4,nrow(Toothfish_IUU))
+                      ,Tonnes = Toothfish_IUU[,"Catch"])
+  res1<-bind_rows(res1,res1_IUU)
+   }
+
+res<-as.data.frame(aggregate(res1[,"Tonnes"],list(res1[,"Decade"],res1[,"Fishery"]),sum))
+dimnames(res)[[2]]<-c("Decade","Fishery","Tonnes")
+
+plotYlog<-TRUE
+
+if(plotYlog){
+  res[res[,"Tonnes"]<1,"Tonnes"]<-1
+   }
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Decade"]), y = res[,"Tonnes"], fill = factor(res[,"Fishery"]))),position = position_dodge(preserve = 'single'))
+p <- p + labs(x = "Decade", y ="Tonnes", fill = "Fishery",title="Total catch by decade for type of fishery")
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = c(1E0,1E8)) + annotation_logticks(sides="l")
+p <- p + scale_fill_discrete(name = "Fishery", breaks=levels(factor(res[,"Fishery"])),labels = TF_Names[as.character(TF_Names[,"TFn"])  %in%  levels(factor(res[,"Fishery"])),"Fishery"],type=TF_Names[,"Colour"]) # change legend labels
+
+p
+
+```
+  
+
+  
+```{r GTstep1,echo=FALSE}
+# visual inspection of aggregation according to th
+
+# code to check assignment of location of fishing gear - bottom or midwater fisheries - once done, this code can be turned off with logical
+
+                      CheckBottomFishAssignments<-FALSE
+                      if(CheckBottomFishAssignments){
+                        Factors<-c("GTY_Code","Flag_CTY_Code","TFN")
+                        LevelCombinations<-unique(CSBdata[,Factors])
+                        apply(LevelCombinations,1,fnCatch_summary
+                              ,CSBdata,Factors,BFTaxa,Threshold=10)
+                        } # end if
+
+# add location following inspection and creating a CSV file with relevant assignment from first step: data_Location_B_M_Step_1
+
+dfTmp1<-merge(CSBdata,data_Location_B_M_Step_1,by=c("GTY_Code","Flag_CTY_Code","TFN"))
+
+```
+  
+```{r GTstep2,echo=FALSE}
+# check OT,SUN,TFN=c(1,7) in more detail as still uncertain - once done, this code can be turned off with logical
+
+                       CheckSUN_OTassignments<-FALSE
+                       if(CheckSUN_OTassignments){
+                                                dfSUN<-CSBdata[CSBdata[,"GTY_Code"]=="OT" 
+                                     & CSBdata[,"Flag_CTY_Code"]=="SUN"
+                                     & CSBdata[,"TFN"] %in% c(1,7),]
+                         Factors<-c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year")
+                         LevelCombinations<-unique(dfSUN[,Factors])
+                         apply(LevelCombinations,1,fnCatch_summary
+                               ,dfSUN,Factors,BFTaxa,Threshold=10)
+                         } # end if
+
+# modify location following inspection of SUN data for OT and creating a CSV file with relevant assignment from second step: data_Location_B_M_Step_2
+
+dfTmp2<-merge(dfTmp1,data_Location_B_M_Step_2,by=c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year"),all.x=TRUE)
+dfTmp2[dfTmp2[,"Location.x"]=="U","Location.x"]<-dfTmp2[dfTmp2[,"Location.x"]=="U","Location.y"]
+dimnames(dfTmp2)[[2]][dimnames(dfTmp2)[[2]]=="Location.x"]<-"Location"
+CSBdata<-dfTmp2[,-which(dimnames(dfTmp2)[[2]] %in% "Location.y")]
+GTY_rev<-CSBdata[,"GTY_Code"]
+GTY_rev[GTY_rev=="OT"]<-unlist(lapply(CSBdata[GTY_rev=="OT","Location"],function(g){paste("OT",g,sep="")}))
+CSBdata<-cbind(CSBdata,GTY_rev)
+
+remove("dfTmp1")
+remove("dfTmp2")
+remove("GTY_rev")
+
+```
+
+
+```{r DCprepare,echo=FALSE}
+
+# some routines for summarising data in preparing for rules
+
+CheckRecords<-FALSE
+if(CheckRecords){
+dfcombo<-CSBdata[CSBdata[,"Catch_TXN_Code"] %in% c("WIC"),]
+  Factors<-c("Flag_CTY_Code","GAR_Code")
+  LevelCombinations<-unique(dfcombo[,Factors])
+  apply(LevelCombinations,1,fnCatch_summary
+        ,dfcombo,Factors,BFTaxa,Threshold=10)
+ remove("dfcombo")
+    } # end if
+
+```
+
+
+```{r DCfunctions,echo=FALSE}
+
+
+fnDistributeCatch<-function(c,CD,dCSB){
+           subCSB<-dCSB[CD[[c]]$Subset,]
+           res<-bind_rows(lapply(subCSB[,"Green_Weight"],function(gw,subD){gw*subD},CD[[c]]$Distribution))
+           rule<-as.data.frame(matrix(CD[[c]]$Rule,ncol=1,nrow=nrow(subCSB),dimnames=list(NULL,"Rule")))
+           return(bind_cols(subCSB,rule,res))
+           }
+
+
+```
+
+
+```{r CatchDistSetup, echo=FALSE}
+########## Seabed areas #############################################
+
+Seabed_areas <- readRDS(Seabed_file)
+# give each cell an area of 2x2 km until it is available in input file
+Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
+
+# rename variables to be consistent with code
+dimnames(Seabed_areas)[[2]]<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","SSRU","SSMU","Area")
+
+Cbed_rules<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]) & !is.na(Seabed_areas[,"ASD"]) 
+                         & !is.na(Seabed_areas[,"MEASO"]),c("Cell","Lon","Lat","Depth","MEASO","ASD","SSMU","SSRU","Area")]
+Cbed_rules[is.na(Cbed_rules[,"SSRU"]),"SSRU"]<-"NA"
+Cbed_rules[is.na(Cbed_rules[,"SSMU"]),"SSMU"]<-"NA"
+
+remove(Seabed_areas)  # free up memory
+
+
+###############################################################
+      
+      
+
+CatchDistRules <- fnSetupCatchDistRules(
+                      CSBdata
+                     ,Depth_intervals
+                     ,Cbed_rules
+                     ,AreaGroups
+                     ,MEASOareas[,"Code"]
+                     ,ASDareas[,"Code"]
+                     ) # end fn call
+
+RuleNames<-unlist(lapply(CatchDistRules,function(CDR){return(CDR$Rule)}))
+RuleStatAreas<-unlist(lapply(CatchDistRules,function(CDR){return(CDR$ASDstatArea)}))
+
+```
+
+
+```{r CD_Area48, include=FALSE, echo=FALSE}
+StatArea<-48
+AreaRules<-which(RuleStatAreas %in% StatArea)
+pdf <- bind_rows(lapply(AreaRules,function(r,CDR){return(
+                bind_cols(data.frame(Rule = CDR[[r]]$Rule
+                                    ,Description = CDR[[r]]$Description)
+                                    ,CDR[[r]]$Distribution))
+                                    },CatchDistRules))
+#print.data.frame(pdf[order(pdf[,"Rule"]),],row.names=FALSE,right=FALSE)
+```
+
+
+  
+```{r CD_Area58, include=FALSE, echo=FALSE}
+StatArea<-58
+AreaRules<-which(RuleStatAreas %in% StatArea)
+pdf <- bind_rows(lapply(AreaRules,function(r,CDR){return(
+                bind_cols(data.frame(Rule = CDR[[r]]$Rule
+                                    ,Description = CDR[[r]]$Description)
+                                    ,CDR[[r]]$Distribution))
+                                    },CatchDistRules))
+# print.data.frame(pdf[order(pdf[,"Rule"]),],row.names=FALSE,right=FALSE)
+
+```
+
+
+
+```{r CD_Bottom_Area88, include=FALSE, echo=FALSE}
+StatArea<-88
+AreaRules<-which(RuleStatAreas %in% StatArea)
+pdf <- bind_rows(lapply(AreaRules,function(r,CDR){return(
+                bind_cols(data.frame(Rule = CDR[[r]]$Rule
+                                    ,Description = CDR[[r]]$Description)
+                                    ,CDR[[r]]$Distribution))
+                                    },CatchDistRules))
+#print.data.frame(pdf[order(pdf[,"Rule"]),],row.names=FALSE,right=FALSE)
+```
+
+
+
+  
+# Toothfish  
+  
+```{r Catcth_toothfish_setup, echo=FALSE}
+
+Title_Taxa<-"Toothfish"
+
+CatchTaxa<-c("TOT","TOP","TOA")
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+# to ensure toothfish catch is assigned to correct depth range when reported as bycatch
+# in pelagic fisheries
+
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -600
+  
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Toothfish - Northern.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Toothfish - Subantarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Toothfish - Antarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Toothfish - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+``` 
+
+ 
+  
+# Groundfish  
+  
+```{r Catcth_groundfish_setup, echo=FALSE}
+
+Title_Taxa<-"Groundfish"
+
+CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(1,2,10,15,16)),"Code"]
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+
+# to ensure groundfish catch are assigned to correct depth range when reported as bycatch
+# in pelagic fisheries
+
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -600
+  
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Groundfish - Northern.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Groundfish - Subantarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Groundfish - Antarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Groundfish - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+``` 
+
+  
+# Toothfish & Groundfish combined  
+  
+```{r , echo=FALSE}
+
+Title_Taxa<-"Toothfish & Groundfish"
+
+CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(1,2,4,5,10,15,16)),"Code"]
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+# to ensure toothfish & groundfish catch is assigned to correct depth range when reported as bycatch
+# in pelagic fisheries
+
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -600
+
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+if(PlotToFile) ggsave("Catch - Groundfish & toothfish - Northern.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+if(PlotToFile) ggsave("Catch - Groundfish & toothfish - Subantarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+if(PlotToFile) ggsave("Catch - Groundfish & toothfish - Antarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Groundfish & toothfish - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+``` 
+
+ 
+  
+
+# Icefish  
+  
+```{r Catcth_icefish_setup, echo=FALSE}
+
+Title_Taxa<-"Icefish"
+
+CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(3,9)),"Code"]
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+# to ensure icefish catches are assigned to correct depth range when reported as bycatch
+# in pelagic fisheries
+
+  DI[c(4,5,6),"Minimum"]<- -100
+  DI[c(4,5,6),"Maximum"]<- -700
+  
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Icefish - Northern.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Icefish - Subantarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Icefish - Antarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Icefish - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+``` 
+
+
+   
+# Silverfish and myctophids  
+
+```{r , echo=FALSE}
+
+Title_Taxa<-"Myctophids and Silverfish"
+
+CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(12,14)),"Code"]
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Mesopelagics - Northern.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Mesopelagics - Subantarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Mesopelagics - Antarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Mesopelagics - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+``` 
+
+
+# Antarctic Krill
+  
+```{r , echo=FALSE}
+
+Title_Taxa<-"Antarctic krill"
+
+CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(13)),"Code"]
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Krill - Northern.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Krill - Subantarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+if(PlotToFile) ggsave("Catch - Krill - Antarctic.tiff",width=15,height=10,units="cm")
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Krill - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+```
+  
+
+# Finfish Bycatch  
+  
+```{r , echo=FALSE}
+
+Title_Taxa<-"Finfish Bycatch"
+
+CatchTaxa<- BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(6,7)),"Code"] # 6 is grenadiers & 7 is Skates anbd rays
+
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+# to ensure catches are assigned to correct depth range when reported as bycatch
+# in pelagic fisheries
+
+  DI[c(4,5,6),"Minimum"]<- -1000
+  DI[c(4,5,6),"Maximum"]<- -2000
+  
+# for time series plots
+  
+removeLastYear<-TRUE
+includeZeroCatch<-FALSE
+
+plotYlog<-FALSE
+plotIndependently<-TRUE  # for zone plots
+
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+
+```
+  
+  
+```{r ,echo=FALSE}
+### codeCatchProcess ######
+
+CatchDistRules <- fnSetupCatchDistRules(
+  CSBdata
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+Res<-bind_rows(lapply(seq(1,length(CatchDistRules),1),fnDistributeCatch,CatchDistRules,CSBdata))
+
+CatchByRules<-unlist(lapply(seq(1,length(CatchDistRules),1),function(c,CD,dCSB,Taxa){
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  sum(subCSB[which(subCSB[,"Catch_TXN_Code"] %in% Taxa),"Green_Weight"])
+},CatchDistRules,CSBdata,CatchTaxa))
+
+dfTaxa<-CSB_taxa[match(CatchTaxa,CSB_taxa[,"TXN_Code"]),c("TXN_Code","TXN_Name")]
+dimnames(dfTaxa)[[2]]<-c("Code","Name")
+
+plotMareas<-as.data.frame(MEASOareas[MEASOareas[,"Code"]!="Outside",c("chOrder","Code","Col","LTY")])
+plotMareas<-bind_cols(data.frame(Order = seq(1,nrow(plotMareas),1)),plotMareas)
+
+pdf<-bind_rows(lapply(plotMareas[,"Code"],fnCalcMEASO_TimeSeries,Res,CatchTaxa))
+pdf<-bind_cols(pdf,data.frame(
+  chOrder  = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(pdf[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+pdf<-pdf[order(pdf[,"chOrder"]),]
+pMareas<-MEASOareas[match(unique(pdf[,"chOrder"]),MEASOareas[,"chOrder"]),]
+
+if(plotYlog | !includeZeroCatch) pdf[pdf[,"Catch"]<1,"Catch"]<-NA   
+
+if(removeLastYear) pdf<-pdf[pdf[,"Split_Year"]<max(pdf[,"Split_Year"]),]
+
+```
+
+
+
+## Time series plots for each zone
+
+```{r , echo=FALSE}
+pZone<-"Northern"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone. \n\n",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Subantarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+```{r , echo=FALSE}
+pZone<-"Antarctic"
+
+Title_Z<-paste("Total catch of ",Title_Taxa," by sector in the ",pZone," Zone",sep="")
+
+pdf_Z<-pdf[pdf[,"MEASO"] %in% MEASOareas[MEASOareas[,"Zone"]==pZone,"Code"],]
+
+if(nrow(pdf_Z[!is.na(pdf_Z[,"Catch"]),])>0) { # need to have catch in the zone for this to work
+  
+pdf_Z$MEASO<-factor(pdf_Z$MEASO,levels = pMareas[pMareas[,"Zone"]==pZone,"Code"]) 
+Area<-pdf_Z$MEASO
+pdf_Z$Sector<-factor(pdf_Z$Sector,levels = pMareas[pMareas[,"Zone"]==pZone,"Sector"]) 
+Sector<-pdf_Z$Sector
+
+if(plotIndependently){
+  
+  maxCatch<-max(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+  minCatch<-min(pdf_Z[!is.na(pdf_Z[,"Catch"]),"Catch"])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+} # end plot independently
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  
+}
+
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+)#end theme
+p<- p+ geom_line(pdf_Z, mapping = (aes(x = pdf_Z[,"Split_Year"], y = pdf_Z[,"Catch"], col = Sector)), show.legend=TRUE)
+
+p <- p + labs(x = "Year", y ="Catch (tonnes)", title=Title_Z)
+
+p<-p + scale_colour_manual(values=MEASOsectors[,"Colour"])
+p
+
+} else {
+print(paste("No catch of ",Title_Taxa," in any sector in the ",pZone," Zone",sep=""))
+ 
+}  # end if catch in the zone
+
+```
+
+## Total catch by sector and zone
+
+```{r , echo=FALSE}
+plotYlog<-FALSE
+Title_CZ<-paste("Total catch of ",Title_Taxa," by sector within zones",sep="")
+
+includeMEASOareas<-MEASOareas[!(MEASOareas[,"Code"]=="Outside"),"Code"]
+Catch_S_Z_zeros<-data.frame(MEASO = includeMEASOareas, Catch = rep(0,length(includeMEASOareas)))
+pdf_SZ<-bind_rows(pdf[!is.na(pdf[,"Catch"]),c("MEASO","Catch")],Catch_S_Z_zeros)
+
+res<-aggregate(pdf_SZ[,"Catch"],by=list(pdf_SZ[,"MEASO"]),sum)
+dimnames(res)[[2]]<-c("MEASO","Catch")
+
+res<-bind_cols(res,data.frame(
+  chOrder  = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"chOrder"]
+  ,Sector = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Sector"]
+  ,Zone   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Zone"]
+  ,Colour   = MEASOareas[match(res[,"MEASO"],MEASOareas[,"Code"]),"Col"]
+))
+
+res<-res[order(res[,"chOrder"]),]
+
+
+if(plotYlog){
+  res[res[,"Catch"]<1,"Catch"]<-0.1
+   }
+
+maxCatch<-max(res[!is.na(res[,"Catch"]),"Catch"])
+minCatch<-min(res[!is.na(res[,"Catch"]),"Catch"])
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minCatch)),10^ceiling(log10(maxCatch)))
+} else {
+  YmaxVals<-fnYmax(maxCatch)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+p <- ggplot()
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid"))
+
+p<- p+ geom_col(res, mapping = (aes(x = factor(res[,"Zone"],levels=MEASOzones[,"Name"]), y = res[,"Catch"], fill = factor(res[,"Sector"],levels=MEASOsectors[!(MEASOsectors[,"Name"]=="Outside"),"Name"]))),position = position_dodge(preserve = 'single'))
+
+p <- p + labs(x = "Zone", y ="Catch (tonnes)", fill = "Sector",title=Title_CZ)
+if (plotYlog) p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+p
+
+if(PlotToFile) ggsave("Catch - Finfish Bycatch - MEASO Totals.tiff",width=15,height=10,units="cm")
+
+```
+  

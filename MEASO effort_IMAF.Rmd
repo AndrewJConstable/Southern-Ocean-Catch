@@ -1,0 +1,472 @@
+---
+title: "MEASO - longline effort by ASD for IMAF"
+author: "Andrew Constable"
+date: "25/10/2020"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_depth: 4
+    fig_caption: yes
+
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(ggplot2)
+library(scales)
+library(png) # for grabbing dimensions of png files
+library(dplyr)
+library(raster)
+library(rgdal)
+library(maptools)
+library(sp)
+library(measoshapes) # from GitHub  remotes::install_github("AustralianAntarcticDivision/measoshapes")
+library(sf)
+library(RColorBrewer)
+library(SOmap)  #remotes::install_github("AustralianAntarcticDivision/SOmap")
+library(geodist)
+library(rgeos)
+library(colorspace)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+
+
+RootDir<-'/Users/andreworca/Desktop/_wAAD/'
+WorkDir<-'/Users/andreworca/Desktop/_wAAD/_d/Catch/'
+
+# Editing and Development Notes:
+#
+# 1. This code is inherited from "MEASO CCAMLR catch data.rmd" which has the basic analyses testing the data.  
+            # The code here strips away the testing routines.
+#
+
+
+source("InputData.R")
+
+BirdCatchData   <-read.csv2(paste(WorkDir,'Seabird bycatch.csv',sep="")
+                              , header = TRUE, sep = ",", dec = ".")
+
+# Output flags
+
+plotToothfish<-TRUE
+addIUU<-TRUE
+
+# distribution of catches by which areas
+
+AreaGroups<-c("ASD")  # add ASD if need both
+
+
+# decades for reporting
+
+decade<-seq(1960,2010,10)
+
+
+
+################# load functions #####################
+
+source("fnBaseRules.R") # the rules for dividing ASD catch and effort between MEASO areas
+source("fnCatch_summary.R")
+source("fnDepthArea.R")
+source("fnCalcMEASO_TimeSeries_Effort.R")
+source("fnCalcMEASO_TimeSeries.R")
+source("fnDistributeDepVar.R")
+
+source("fnSetupCatchDistRule.R")
+source("fnCatchDistRule.R")
+source("fnPropInMareaForRule.R")
+
+
+fnYmax<-function(m){# m is the maximum catch
+  om<-floor(log10(m)) # order of magnitude
+ if((m*10^(-om))>5) cInt<-10^om else cInt<-0.5*10^om
+ return(c(ceiling(m/cInt)*cInt,cInt))
+  } # end function
+
+
+
+```
+
+
+```{r ,echo=FALSE}
+# CEdata is the main data frame with effort records
+
+CC_Season<-CEdata[,"Calendar_Year"]
+NextYear<-!is.na(CEdata[,"Month"]) & CEdata[,"Month"]>11
+CC_Season[NextYear]<-CC_Season[NextYear]+1
+Split_Year<-CEdata[,"Calendar_Year"]
+NextYear<-!is.na(CEdata[,"Month"]) & CEdata[,"Month"]>6
+Split_Year[NextYear]<-Split_Year[NextYear]+1
+CEdata<-cbind(CEdata,CC_Season,Split_Year)
+```
+
+
+```{r catch_1, echo=FALSE, eval=FALSE}
+# separation of krill catch from fish catch given same effort record.  assume effort was bottom trawling if it was mixed as no data to differentiate.
+
+
+########################################################################
+# modify records to enable use of rules to assign catches to MEASO areas
+
+# NOTE - IF RECORDS ARE MODIFIED TO CHANGE GROUP - MAKE CHANGES IN "B-M Step1.CSV" OR "B-M Step2.CSV" AS REQUIRED 
+
+########
+# Case 1: SUN catch in Area 58 in years 1978, 1979.  Has Antarctic krill and Subantarctic fish species. Reassign krill to 
+# midwater trawl (not bottom trawl) and krill fishery rather than groundfish fishery
+
+dfSelect <- (CEdata[,"Flag_CTY_Code"]=="SUN" 
+          & CEdata[,"GAR_Code"]=="58" 
+          & (CEdata[,"Calendar_Year"]=="1978" | CEdata[,"Calendar_Year"]=="1979")
+          & CEdata[,"Catch_TXN_Code"]== "KRI")
+CEdata[dfSelect,"Target_TXN_Code"] <- "KRI"  # for krill fishery
+
+
+# Added records to "B-M Step2.csv"  :  
+#            OT  SUN  7  58  1978  M
+#            OT  SUN  7  58  1979  M
+
+```
+
+# Corrections of data in the Statistical Bulletin
+
+Effort data for longline fishing in 1996 Split-Year from 58.5.1 seems an order of magnitude higher than plausible.  The mean number of hooks per haul for that year was 29,075 compared to a maximum mean for all other years of 9,319 hooks per line. Inspection of the monthly records, including consideration of flag state, the error seems to be for that split year irrespective of flag state.  Dividing by 10 brings the hooks in line with hauls and catches in years before and after that period for the flag states involved.
+
+```{r Corrections, echo=FALSE}
+dfSelect<-CEdata[,"GAR_Code"]=="5851" & ((CEdata[,"Calendar_Year"]==1995 & CEdata[,"Month"]>6) |(CEdata[,"Calendar_Year"]==1996 & CEdata[,"Month"]<7)) & CEdata[,"GTY_Code"]=="LLS"
+print(CEdata[dfSelect,c("Flag_CTY_Code","Calendar_Year","Month","Target_TXN_Code","Vessel_Count","Haul_Count","Hook_Count")])
+CEdata[dfSelect,"Hook_Count"]<-CEdata[dfSelect,"Hook_Count"]/10
+
+```
+
+```{r TargetGroups, echo=FALSE}
+
+TargetFishery<-CSB_taxa[unique(match(CEdata[,"Target_TXN_Code"],CSB_taxa[,"TXN_Code"])),]
+TF_Plot_Order<-data.frame(TFn      = c(     3,     2,     8,     1,     7,     6,      1,    2,     1 
+                                            ,    6,     1,     5,     9,     1,     2)
+                         ,TXN_Code = c( "TOT", "ANI", "SQS", "MZZ", "KRI", "LXX", "NOX", "ICX", "NOG"
+                                            ,"ELC", "GHP", "ANS", "KCX", "NOS", "WIC")
+                         ,DepthRange = c("600-1800m", "100-700m", "Pelagic", "-", "Pelagic", "Pelagic", "0-500m", "100-650", "0-500m"
+                                            ,"Pelagic", "150-350m", "0-700m", "200-1500m", "0-600m", "100-650m")
+                          ) # end data frame
+
+TF_Plot_Order<-TF_Plot_Order[order(TF_Plot_Order[,"TFn"]),]
+
+printTF<-data.frame(Fishery    = TF_Names[match(TF_Plot_Order[,"TFn"],TF_Names[,"TFn"]),"Fishery"]
+                   ,TaxonCode  = TF_Plot_Order[,"TXN_Code"]
+                   ,TaxonName  = CSB_taxa[match(TF_Plot_Order[,"TXN_Code"],CSB_taxa[,"TXN_Code"]),"TXN_Name"]
+                   ,Depth      = TF_Plot_Order[,"DepthRange"]
+                   ) # end df
+
+# create vector to be added to CEdata for the Target fishery for each record
+
+Fishery_type<-TF_Plot_Order[match(CEdata[,"Target_TXN_Code"],TF_Plot_Order[,"TXN_Code"]),"TFn"]  # plot by number of Target Fishery to get right order 
+
+CEdata<-cbind(CEdata,Fishery_type)
+dimnames(CEdata)[[2]][length(names(CEdata))]<-"TFN"
+```
+
+```{r GTstep1,echo=FALSE}
+# add location following inspection and creating a CSV file with relevant assignment from first step: data_Location_B_M_Step_1
+# avoid problems with merge creating row names
+
+dfTmp1<-merge(CEdata,data_Location_B_M_Step_1,by=c("GTY_Code","Flag_CTY_Code","TFN"))
+
+```
+  
+
+```{r GTstep2,echo=FALSE}
+# modify location following inspection of SUN data for OT and creating a CSV file with relevant assignment from second step: data_Location_B_M_Step_2
+
+dfTmp2<-merge(dfTmp1,data_Location_B_M_Step_2,by=c("GTY_Code","Flag_CTY_Code","TFN","GAR_Code","Calendar_Year"),all.x=TRUE)
+dfTmp2[dfTmp2[,"Location.x"]=="U","Location.x"]<-dfTmp2[dfTmp2[,"Location.x"]=="U","Location.y"]
+dimnames(dfTmp2)[[2]][dimnames(dfTmp2)[[2]]=="Location.x"]<-"Location"
+CEdata<-dfTmp2[,-which(dimnames(dfTmp2)[[2]] %in% "Location.y")]
+GTY_rev<-CEdata[,"GTY_Code"]
+GTY_rev[GTY_rev=="OT"]<-unlist(lapply(CEdata[GTY_rev=="OT","Location"],function(g){paste("OT",g,sep="")}))
+CEdata<-cbind(CEdata,GTY_rev)
+
+remove("dfTmp1")
+remove("dfTmp2")
+remove("GTY_rev")
+
+```
+
+```{r BottomTrawl_TotalCatch, echo=FALSE}
+# deal with no effort data
+
+# merge columns for each record which is the total groundfish+icefish+toothfish catch in order to analyse the 
+# proportion of the catch in the year represented by the records with effort information.
+
+CatchTaxa<-c("TOT","TOP","TOA",BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(1,2,10,15,16)),"Code"],BFTaxa[which(BFTaxa[,"Catch_Group"] %in% c(3,9)),"Code"])
+
+# extract catch data associated with effort records & compare with a total extraction of target catch data
+
+RecordID<-CEdata[,"AFE_ID"]
+
+#subset catch data to include records from effort data and only for CatchTaxa
+
+BottomTrawlCatch<-CSBdata[which(CSBdata[,"AFE_ID"] %in% RecordID),]
+BottomTrawlCatch<-BottomTrawlCatch[which(BottomTrawlCatch[,"Catch_TXN_Code"] %in% CatchTaxa),]
+BTcatch<-aggregate(BottomTrawlCatch[,"Green_Weight"],list(BottomTrawlCatch[,"AFE_ID"]),sum)
+
+dimnames(BTcatch)[[2]]<-c("AFE_ID","Catch")
+CEdata<-merge(CEdata,BTcatch,by="AFE_ID")
+#print(CEdata)
+
+
+
+```
+
+# Rules for distributing effort between MEASO reporting areas
+
+Effort was distributed amongst MEASO areas according to the rules developed for distributing catch.
+
+```{r MEASOdistributionFunctions,echo=FALSE}
+########## Seabed areas #############################################
+
+Seabed_areas <- readRDS(Seabed_file)
+# give each cell an area of 2x2 km until it is available in input file
+Seabed_areas<-cbind(Seabed_areas,rep(4,nrow(Seabed_areas)))
+
+# rename variables to be consistent with code
+dimnames(Seabed_areas)[[2]]<-c("Lon","Lat","Cell","Depth","Iceshelf","MEASO","ASD","SSRU","SSMU","Area")
+
+Cbed_rules<-Seabed_areas[!(Seabed_areas[,"Iceshelf"]) & !is.na(Seabed_areas[,"ASD"]) 
+                         & !is.na(Seabed_areas[,"MEASO"]),c("Cell","Lon","Lat","Depth","MEASO","ASD","SSMU","SSRU","Area")]
+Cbed_rules[is.na(Cbed_rules[,"SSRU"]),"SSRU"]<-"NA"
+Cbed_rules[is.na(Cbed_rules[,"SSMU"]),"SSMU"]<-"NA"
+
+remove(Seabed_areas)  # free up memory
+```
+
+
+# Longlining and Potting Effort
+
+Longlining and potting is combined.  as they both use bottom longline deployments.  the two methods of longline fishing have not been differentiated - Spanish longlines, which tend to float off the bottom once deployed, and integrated weighted lines, which sit on the bottom.
+
+## Longlines
+
+```{r , echo=FALSE}
+
+dLine<-CEdata[CEdata[,"Location"]=="B" & (CEdata[,"GTY_rev"]=="LLS"), ]
+
+EffortRecords<-                    (!is.na(dLine[,"Hook_Count"]) &  is.na(dLine[,"Haul_Count"]) &  is.na(dLine[,"Fishing_Days"]))
+EffortRecords<-cbind(EffortRecords,( is.na(dLine[,"Hook_Count"]) & !is.na(dLine[,"Haul_Count"]) &  is.na(dLine[,"Fishing_Days"])))
+EffortRecords<-cbind(EffortRecords,( is.na(dLine[,"Hook_Count"]) &  is.na(dLine[,"Haul_Count"]) & !is.na(dLine[,"Fishing_Days"])))
+EffortRecords<-cbind(EffortRecords,(!is.na(dLine[,"Hook_Count"]) & !is.na(dLine[,"Haul_Count"]) &  is.na(dLine[,"Fishing_Days"])))
+EffortRecords<-cbind(EffortRecords,(!is.na(dLine[,"Hook_Count"]) &  is.na(dLine[,"Haul_Count"]) & !is.na(dLine[,"Fishing_Days"])))
+EffortRecords<-cbind(EffortRecords,( is.na(dLine[,"Hook_Count"]) & !is.na(dLine[,"Haul_Count"]) & !is.na(dLine[,"Fishing_Days"])))
+EffortRecords<-cbind(EffortRecords,(!is.na(dLine[,"Hook_Count"]) & !is.na(dLine[,"Haul_Count"]) & !is.na(dLine[,"Fishing_Days"])))
+# for all NAs
+res<-seq(1,nrow(dLine),1)
+for(c in 1:ncol(EffortRecords)) res<-res[!EffortRecords[res,c]]
+EffortRecords<-cbind(EffortRecords,rep(FALSE,nrow(dLine)))
+EffortRecords[res,ncol(EffortRecords)]<-TRUE
+
+
+cat("Records for Hooks                : ",sum(EffortRecords[,1]),"\n",sep="")
+cat("Records for Hauls                : ",sum(EffortRecords[,2]),"\n",sep="")
+cat("Records for Days                 : ",sum(EffortRecords[,3]),"\n",sep="")
+cat("Records for Hooks & Hauls        : ",sum(EffortRecords[,4]),"\n",sep="")
+cat("Records for Hooks & Days         : ",sum(EffortRecords[,5]),"\n",sep="")
+cat("Records for Hauls & Days         : ",sum(EffortRecords[,6]),"\n",sep="")
+cat("Records for Hooks, Hauls, Days   : ",sum(EffortRecords[,7]),"\n",sep="")
+cat("Records for NA in all three      : ",sum(EffortRecords[,8]),"\n",sep="")
+cat("Records Total                    : ",nrow(dLine),"\n",sep="")
+
+
+# save records with missing effort
+#write.csv2(dLine[EffortRecords[,8],],"CSB_missing_effort.csv")
+
+# 
+```
+
+Number of hooks is a good proxy for the length of the longline.  This is because they are typically set 1m apart.  Less than 5% of longline records (114 out of 2603) do not have hooks associated with them.  These records were not used in this analysis.
+
+
+```{r , echo=FALSE}
+# general setup 
+
+CheckCatch<-TRUE
+DepVar<-"Hook_Count"  # dependent variable to be accumulated
+PixelsTotal <- rep(0,nrow(Cbed_rules))     # generate vector of zeros for N pixels for map of total effort
+EffortTimeSeries<-NULL  # accumulation of effort for each fishery for later aggregating into a single time series
+KeepVars<-c("Split_Year")
+
+Resolution<-4 # km2  of pixels
+
+removeLastYear<-TRUE
+includeZeroCatch<-TRUE
+plotYlog<-FALSE
+YtickMajor<-5000
+YtickMinor<-1000
+YtickMinorN<-YtickMajor/YtickMinor-1
+
+XtickMajor<-10
+XtickMinor<-1
+XtickMinorN<-XtickMajor/XtickMinor-1
+
+Xlimits<-c(1970,2020)
+```
+
+
+```{r Toothfish_LL, echo=FALSE}
+
+TF<-3  # Target Fishery = toothfish  ### could be vector
+DI<-Depth_intervals  # for altering depth intervals as needed for individual taxa
+
+DistRules <- fnSetupCatchDistRules(  # apply rules given depths
+   dLine
+  ,DI
+  ,Cbed_rules
+  ,AreaGroups
+  ,MEASOareas[,"Code"]
+  ,ASDareas[,"Code"]
+) # end fn call
+
+####################################################
+# determine total effort by rules
+
+EffortByRules<-lapply(seq(1,length(DistRules),1),function(c,CD,dCSB,tf,DV,CheckCatch){  # rule#, ruleList,dataset,target fishery
+  subCSB<-dCSB[CD[[c]]$Subset,]
+  Effort<-subCSB[which(subCSB[,"TFN"] %in% tf),DV]
+  if(CheckCatch){
+      Catch<-subCSB[which(subCSB[,"TFN"] %in% tf),"Catch"]
+      return(data.frame(Effort           = sum(Effort[!is.na(Effort)])
+                       ,CatchTotal       = sum(Catch)
+                       ,CatchNotNAEffort = sum(Catch[!is.na(Effort)]) ))
+      } else { # end if CheckCatch
+       return(data.frame(Effort = sum(Effort[!is.na(Effort)])))
+      } #end else
+},DistRules,dLine,TF,DepVar,CheckCatch)
+
+EffortByRules<-bind_rows(EffortByRules)
+
+####################################################
+# distribute catches to pixels
+Pixels    <- rep(0,nrow(Cbed_rules))     # generate vector of zeros for N pixels
+RuleZeroArea<-NULL
+for(c in seq(1,length(DistRules),1)){ # too memory intensive to do lapply
+  if(DistRules[[c]]$Area_km2!=0){
+    Density   <- EffortByRules[c,"Effort"]/DistRules[[c]]$Area_km2        # density per km2
+    # place value in each relevant pixel according to CbedAreaSubset multiplying by Cbed[,"Area"]
+    Pixels[DistRules[[c]]$CbedAreaSubset] <- 
+      Pixels[DistRules[[c]]$CbedAreaSubset] + 
+      Density*Resolution  # in order that sum of pixels in an area gives the correct quantity  
+  } else {
+    RuleZeroArea<-c(RuleZeroArea,c,EffortByRules[c,"Effort"])
+  }
+} # end loop c
+
+cat(cat("Total effort in Bulletin for fishery ("),cat(TF_Plot_Order[which(TF_Plot_Order[,"TFn"] %in% TF),"TXN_Code"],sep=", "),cat("): ", sum(EffortByRules[,"Effort"])),"\n",sep="")
+cat("     Proportion of Catch with Effort Records: ",(sum(EffortByRules[,"CatchNotNAEffort"])/sum(EffortByRules[,"CatchTotal"])),"\n",sep="")
+
+cat("Effort allocated to pixels: ",sum(Pixels),"\n",sep="") 
+if(!is.null(RuleZeroArea)){
+cat("Rules with zero area and effort not allocated\n")
+print.data.frame(as.data.frame(matrix(RuleZeroArea,ncol=2,byrow=TRUE,dimnames = list(NULL,c("Rule","Effort")))))
+} else {
+ cat("No areas had rules with zero area, and effort not allocated\n\n") 
+}
+
+# combine with other densities
+
+PixelsTotal<-PixelsTotal+Pixels
+```
+
+### generate results
+```{r , echo=FALSE}
+#############################################
+# Effort by MEASO area over time
+
+Res<-bind_rows(lapply(seq(1,length(DistRules),1),fnDistributeDepVar,DistRules,dLine,TF,DepVar,KeepVars))
+
+####################################################
+# check all records are accounted for
+
+if(nrow(Res)!=nrow(dLine)) {cat("Only ",nrow(Res)/nrow(dLine)*100,"% Bulletin records selected by rules.\n\n",sep="")} else {
+  cat("All records from Bulletin selected by application of the rules.\n\n")
+}
+
+# add records to total
+EffortTimeSeries<-bind_rows(EffortTimeSeries,Res)
+
+
+```
+  
+```{r,echo=FALSE}
+# plot time series of bird by-catch
+plotYlog<-FALSE
+
+BirdByCatch<-aggregate(BirdCatchData[,"By.Catch"],list(BirdCatchData[,"Sector"],BirdCatchData[,"Year"]),sum,na.rm=TRUE)
+dimnames(BirdByCatch)[[2]]<-c("Sector","Year","Catch")
+BirdByCatch[BirdByCatch[,"Year"]<2000 & BirdByCatch[,"Catch"]==0,"Catch"]<-NA
+BirdByCatch<-bind_cols(data.frame(Fleet = rep("Legal",nrow(BirdByCatch))),BirdByCatch)
+
+BirdIUU<-aggregate(BirdCatchData[,"IUU"],list(BirdCatchData[,"Sector"],BirdCatchData[,"Year"]),sum,na.rm=TRUE)
+dimnames(BirdIUU)[[2]]<-c("Sector","Year","Catch")
+BirdIUU[(BirdIUU[,"Year"]<2000 | BirdIUU[,"Year"]>2007) & BirdIUU[,"Catch"]==0,"Catch"]<-NA
+BirdIUU<-bind_cols(data.frame(Fleet = rep("IUU",nrow(BirdIUU))),BirdIUU)
+
+pdf<-bind_rows(BirdByCatch,BirdIUU)
+
+# assign uncertainty to points to use as point size in plots
+pdf<-bind_cols(pdf,data.frame(Uncertainty=rep(0.5,nrow(pdf))))
+selRows<-pdf[,"Fleet"]=="Legal" & 
+        ( (pdf[,"Sector"]=="Central Indian" & pdf[,"Year"]>=2002) | 
+          (pdf[,"Sector"]=="Atlantic" & pdf[,"Year"]>=1994) |
+          (pdf[,"Sector"]=="West Pacific" & pdf[,"Year"]>=1998)
+        ) # end selection  
+pdf[selRows,"Uncertainty"]<-1
+
+PlotVar<-"Catch"
+
+maxY<-max(pdf[!is.na(pdf[,PlotVar]),PlotVar])
+minY<-min(pdf[!is.na(pdf[,PlotVar]),PlotVar])
+
+if(plotYlog){
+  Ylimits<-c(10^floor(log10(minY)),10^ceiling(log10(maxY)))
+} else {
+  YmaxVals<-fnYmax(maxY)
+  Ylimits<-c(0,YmaxVals[1])
+  YtickMajor<-YmaxVals[2]
+}
+
+pdf$Sector<-factor(pdf$Sector) 
+Sector<-pdf$Sector
+pdf$Fleet<-factor(pdf$Fleet,levels =c("Legal","IUU"))
+Fleet<-pdf$Fleet
+
+
+
+Xlimits<-c(floor(min(pdf[,"Year"])/10)*10,ceiling(max(pdf[,"Year"])/10)*10)
+
+
+p<-ggplot() 
+p<-p +scale_x_continuous(minor_breaks = seq(Xlimits[1],Xlimits[2],by=XtickMinor), breaks = seq(Xlimits[1],Xlimits[2],by=XtickMajor), limits = Xlimits)
+if (plotYlog) {
+  p <- p + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),labels = trans_format("log10", math_format(10^.x)), limits = Ylimits) + annotation_logticks(sides="l")
+} else {
+  p<-p +scale_y_continuous(breaks = seq(Ylimits[1],Ylimits[2],by=YtickMajor), minor_breaks = seq(Ylimits[1],Ylimits[2],by=YtickMinor), limits = Ylimits, labels = scales::comma)
+  }
+p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+               ,panel.background = element_blank()
+               , axis.line = element_line(colour = "black",size=1, linetype="solid")
+               ,axis.ticks.length=unit(0.25,"cm")
+               ,legend.key.width = unit(1,"cm")
+               )#end theme
+p<- p+ geom_line(pdf, mapping = (aes(x = pdf[,"Year"], y = pdf[,PlotVar], col = Sector, lty = Fleet)), show.legend=TRUE)
+p<- p+ geom_point(pdf, mapping = (aes(x = pdf[,"Year"], y = pdf[,PlotVar], col = Sector,size=Uncertainty)), show.legend=TRUE)
+p<-p+scale_size(name = "Uncertainty",breaks = c(0.5,1),limits = c(0.5,1),range = c(1,2),labels = c("High","Low"))
+
+p <- p + labs(x = "Year", y ="By-Catch", title="Seabird by-catch by sector")
+
+p<-p + scale_colour_manual(values=MEASOsectors[match(unique(pdf[,"Sector"]),MEASOsectors[,"Name"]),"Colour"])
+p<-p + scale_linetype_manual(values=c("solid","dashed"))
+p
+
+ggsave("IMAF.tiff",width = 15,height = 10, units = "cm")
+```
+
+# References    
+.     
