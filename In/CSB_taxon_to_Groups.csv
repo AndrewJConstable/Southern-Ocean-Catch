@@ -1,0 +1,492 @@
+taxon_code,taxon_scientific_name,taxon_vernacular_name,Taxa_Group_major,Taxa_Group
+ADK,Artedidraco skottsbergi,Plunderfish,Fish,Other
+AEM,Aethotaxis mitopteryx,Longfin icedevil,Fish,Nototheniidae
+AJH,Anthozoa,Anthozoa,Benthos,Benthos
+AJZ,Alcyonacea,Soft corals,Benthos,Benthos
+AKN,Akarotaxis nudiceps,,Fish,Bathydraconidae
+AKW,Aphrodita aculeata,Sea mouse,Benthos,Benthos
+ALH,Alepocephalus spp,Slickheads nei,Fish,Other
+ALI,Alepisaurus spp,Lancetfishes nei,Fish,Other
+ALZ,Diomedeidae,Albatrosses nei,Bird,Flying Bird
+ANA,Engraulis anchoita,Argentine anchovy,Fish,Mesopelagic
+AND,Tylosurus acus,Agujon needlefish,Fish,Other
+ANI,Champsocephalus gunnari,Mackerel icefish,Fish,Channichthyidae
+ANP,Anotopterus pharao,Daggertooth,Fish,NA
+ANS,Pleuragramma antarctica,Antarctic silverfish,Fish,Nototheniidae
+ANT,Antimora rostrata,Blue antimora,Fish,Other
+APL,Plantae aquaticae,Aquatic plants nei,Benthos,Benthos
+AQM,Amphipoda,Amphipods,Zooplankton,Zooplankton
+AQZ,Antipatharia,Black corals and thorny corals,Benthos,Benthos
+ART,Artedidraco spp,,Fish,Other
+ATX,Actiniaria,Sea anemones,Benthos,Benthos
+AXT,Stylasteridae,Hydrocorals,Benthos,Benthos
+AZN,Anthoathecata,"Hydroids, hydromedusae",Zooplankton,Zooplankton
+AZT,Artedidraco mirus,Plunderfish,Fish,Other
+BAA,Bathylagus antarcticus,Deepsea smelt,Fish,Other
+BAE,Balaenopteridae,Balaenoptid whales nei,Marine Mammal,Baleen
+BAM,Bathyraja maccaini,McCain's skate,Chondrichthyes,Skate
+BAT,Platax spp,Batfishes,Fish,Other
+BAW,Berardius arnuxii,Arnoux's beaked whale,Marine Mammal,Toothed whale
+BBB,Labeobarbus bynni,,Fish,Other
+BCW,Ziphius cavirostris,Cuvier's beaked whale,Marine Mammal,Toothed whale
+BDH,Bathydraco macrolepis,,Fish,Bathydraconidae
+BDJ,Bathydraco marri,Deep-water dragon,Fish,Bathydraconidae
+BDN,Bathydraco antarcticus,,Fish,Bathydraconidae
+BE1,Benthos,,Benthos,Benthos
+BEA,Bathyraja eatonii,Eaton's skate,Chondrichthyes,Skate
+BEE,Benthalbella elongata,Pearleyes,Fish,Other
+BEL,Delphinapterus leucas,White whale,Marine Mammal,Baleen
+BHY,Bathyraja spp,Bathyraja rays nei,Chondrichthyes,Skate
+BI1,Aves,Birds,Bird,NA
+BIV,Smilium zancleanum,Acorn barnacle,Benthos,NA
+BLP,Eleginops maclovinus,Patagonian blennie,Fish,Other
+BLT,Auxis rochei,Bullet tuna,Fish,NA
+BLU,Pomatomus saltatrix,Bluefish,Fish,Other
+BLW,Balaenoptera musculus,Blue whale,Marine Mammal,Baleen
+BMU,Bathyraja murrayi,Murray's skate,Chondrichthyes,Skate
+BNZ,Benthalbella macropinna,,Fish,Other
+BQY,Bathydraconidae,Dragonfishes nei,Fish,NA
+BRA,Brama spp,Brama,Fish,Other
+BRC,Brachioteuthis spp,Arm squids nei,Cephalopod,Cephalopod
+BRF,Helicolenus dactylopterus,Blackbelly rosefish,Fish,Other
+BRT,Borostomias antarcticus,Snaggletooth,Fish,Other
+BRX,Berycidae,"Alfonsinos, etc. nei",Fish,Other
+BSZ,Acanthistius brasilianus,Argentine seabass,Fish,Other
+BTH,Alopias superciliosus,Bigeye thresher,Chondrycthies,Shark
+BTY,Bathylagus spp,Blacksmelts,Fish,Other
+BVH,Brachiopoda,"Brachiopods, lamp shells",Benthos,Benthos
+BVK,Pogonophryne barsukovi,,Fish,Other
+BWY,Bathylasmatidae,Barnacle,Benthos,Benthos
+BYE,Bathyraja meridionalis,Dark-belly skate,Chondrichthyes,Skate
+BYR,Bathyraja irrasa,Kerguelen sandpaper skate,Chondrichthyes,Skate
+BZN,Bryozoa,Bryozoans,Benthos,Benthos
+CAH,Callorhinchidae,"Elephantfishes, etc. nei",Fish,Other
+CAM,Stercorarius maccormicki,South polar skua,Bird,Flying Bird
+CAQ,Stercorarius antarcticus,Brown skua,Bird,Flying Bird
+CDI,Calonectris diomedea,Cory's shearwater,Bird,Flying Bird
+CDN,Chauliodus sloani,Sloane's viperfish,Fish,NA
+CEH,Coelorinchus marinii,Marini's grenadier,Fish,Macrouridae
+CEN,Centrolophidae,"Ruffs, barrelfishes nei",Fish,Other
+CEO,Centrolophus niger,Rudderfish,Fish,Other
+CEP,Cephalopoda,Cephalopods nei,Cephalopod,Cephalopod
+CEQ,Ceratias tentaculatus,Sea devil anglerfish,Fish,Other
+CES,Champsocephalus esox,Pike icefish,Fish,Channichthyidae
+CEX,Genypterus spp,Cusk-eels nei,Fish,Other
+CGE,Chaceon maritae,West African geryon,Crustacea,Crab
+CHM,Callorhinchus capensis,Cape elephantfish,Fish,Other
+CHP,Sardinops sagax,South American pilchard,Fish,Mesopelagic
+CHW,Chionobathyscus dewitti,Icefish spp.,Fish,Channichthyidae
+CKH,Coryphaenoides armatus,Abyssal grenadier,Fish,Macrouridae
+CKY,Umbrina canosai,Argentine croaker,Fish,Other
+CLX,Bivalvia,"Clams, etc. nei",Benthos,Benthos
+CMD,Cephalorhynchus commersonii,Commerson's dolphin,Marine Mammal,Toothed whale
+CNI,Cnidaria,Cnidarians nei,Benthos,Benthos
+CNZ,Crangon spp,Crangon shrimps nei,Crustacea,Shrimp
+COX,Congridae,"Conger eels, etc. nei",Fish,Other
+CRA,Brachyura,Marine crabs nei,Crustacea,Crab
+CRU,Crustacea,Marine crustaceans nei,Crustacea,NA
+CSS,Scleractinia,"Hard corals, madrepores nei",Benthos,Benthos
+CTA,Nemadactylus bergi,Castaneta,Fish,Other
+CUS,Genypterus blacodes,Pink cusk-eel,Fish,Other
+CUX,Holothuroidea,Sea cucumbers nei,Benthos,Benthos
+CVD,Cidaridae,Pencil urchins,Benthos,Benthos
+CVN,Chiasmodon niger,Black swallower,Fish,Other
+CVY,Coryphaenoides spp,"Grenadiers, whiptails nei",Fish,Macrouridae
+CWD,Crinoidea,Feather stars and sea lilies,Benthos,Benthos
+CWS,Careproctus spp,Snailfish,Fish,Other
+CWX,Coelorinchus spp,,Fish,Other
+CX1,Chemosynthetic,,Benthos,NA
+CYC,Cycloteuthidae,Disc-fin squids nei,Cephalopod,Cephalopod
+CYO,Centroscymnus coelolepis,Portuguese dogfish,Chondrichthyes,Shark
+CZ1,Chordata,,Chordata,NA
+CZI,Centroscymnus spp,,Chondrichthyes,Shark
+DAC,Daption capense,Cape petrel,Bird,Flying Bird
+DAH,Dacodraco hunteri,Icefish spp.,Fish,Channichthyidae
+DAM,Diomedea amsterdamensis,Amsterdam Island albatross,Bird,Flying Bird
+DBN,Diomedea dabbenena,Tristan albatross,Bird,NA
+DCR,Thalassarche chlororhynchos,Atlant. yellow-nosed albatross,Bird,Flying Bird
+DCU,Thalassarche cauta,Shy albatross,Bird,Flying Bird
+DDU,Lagenorhynchus obscurus,Dusky dolphin,Marine Mammal,Toothed whale
+DER,Thalassarche eremita,Chatham Islands albatross,Bird,Flying Bird
+DGL,Melamphaidae,Bigscale fishes,Fish,NA
+DIB,Thalassarche bulleri,Buller's albatross,Bird,Flying Bird
+DIC,Thalassarche chrysostoma,Grey-headed albatross,Bird,Flying Bird
+DIL,Diptychus maculatus,Scaly osman,Fish,Other
+DIM,Thalassarche melanophris,Black-browed albatross,Bird,Flying Bird
+DIP,Diomedea epomophora,Southern royal albatross,Bird,Flying Bird
+DIQ,Diomedea sanfordi,Northern royal albatross,Bird,NA
+DIX,Diomedea exulans,Wandering albatross,Bird,Flying Bird
+DKS,Thalassarche salvini,Salvin's albatross,Bird,NA
+DLL,Dolloidraco longedorsalis,Plunderfish spp,Fish,Other
+DLP,Delphinidae,Dolphins nei,Marine Mammal,Toothed whale
+DMK,Adamussium colbecki,Antarctic scallop,Benthos,Benthos
+DMO,Demospongiae,Siliceous sponges,Benthos,Benthos
+DQL,Lycenchelys hureaui,,NA,NA
+DRR,Grampus griseus,Risso's dolphin,Marine Mammal,Toothed whale
+ECH,Echinodermata,Echinoderms,Benthos,Benthos
+ECI,Echiodon cryomargarites,Messmate,Fish,Other
+EKH,Mesonychoteuthis hamiltoni,Antarctic cranch squid,Cephalopod,NA
+ELC,Electrona carlsbergi,Electron subantarctic,Fish,Mesopelagic
+ELN,Electrona antarctica,Antarctic lanternfish,Fish,Mesopelagic
+ELT,Electrona spp,Lanternfishes,Fish,Mesopelagic
+EMT,Emmelichthyidae,"Bonnetmouths, rubyfishes nei",Fish,Other
+ERN,Trematomus bernacchii,Emerald rockcod,Fish,Nototheniidae
+ETF,Etmopterus lucifer,Blackbelly lanternshark,Chondrichthyes,Shark
+ETM,Etmopterus granulosus,Southern lanternshark(Lucifer),Chondrichthyes,Shark
+EUA,Eubalaena australis,Southern right whale,Marine Mammal,Baleen
+EUC,Eudyptes chrysolophus,Macaroni penguin,Bird,Penguin
+EVQ,Eudyptes chrysocome,Rockhopper penguin,Bird,Penguin
+EZK,Muraenolepis evseenkoi,,NA,NA
+EZT,Etmopterus viator,Blue-eye lanternshark,Chondrichthyes,NA
+FGQ,Fregetta tropica,Black-bellied storm petrel,Bird,Flying Bird
+FGZ,Fregetta spp,B/W bellied storm petrels nei,Bird,Flying Bird
+FIC,Cryodraco antarcticus,Long-fingered icefish,Fish,Channichthyidae
+FIW,Balaenoptera physalus,Fin whale,Marine Mammal,Baleen
+FLA,Percophis brasiliensis,Brazilian flathead,Fish,Other
+FO1,Foraminifera,Foraminiferans,Benthos,NA
+FRA,Pontoporia blainvillei,Franciscana,Marine Mammal,Toothed whale
+FUG,Fulmarus glacialoides,Southern fulmar,Bird,Flying Bird
+GAS,Gastropoda,Gastropods nei,Benthos,Benthos
+GDR,Gymnodraco acuticeps,Ploughfish,Fish,Bathydraconidae
+GEA,Gerlachea australis,Dragonfish spp.,Fish,Bathydraconidae
+GEP,Gempylidae,"Snake mackerels, escolars nei",Fish,Other
+GGW,Gorgoniidae,Gorgonians,Benthos,Benthos
+GHP,Patagonotothen guntheri,Yellowfin notothen,Fish,Nototheniidae
+GIS,Dosidicus gigas,Jumbo flying squid,Cephalopod,Cephalopod
+GLO,Globicephala spp,Pilot whales nei,Marine Mammal,Toothed whale
+GR1,Macrourus caml/whitsoni,Caml & whitsoni grenadier (HIMI),Fish,Macrouridae
+GR2,Macrourus carinatus/holotrachys,Carinatus & holotrachys grenadier (HIMI),Fish,Macrouridae
+GRA,Parapristipoma octolineatum,African striped grunt,Fish,Other
+GRM,Macruronus magellanicus,Patagonian grenadier,Fish,Macrouridae
+GRN,Macruronus novaezelandiae,Blue grenadier,Fish,Macrouridae
+GRV,Macrourus spp,Grenadiers nei,Fish,Macrouridae
+GRW,Eschrichtius robustus,Gray whale,Marine Mammal,Baleen
+GSK,Somniosus microcephalus,Greenland shark,Chondrichthyes,Shark
+GSX,Gonostoma spp,,Benthos,NA
+GTO,Pagothenia borchgrevinki,Bald notothen,Fish,Nototheniidae
+GYB,Gymnoscopelus bolini,Lanternfish,Fish,Mesopelagic
+GYF,Gymnoscopelus fraseri,Lanternfish,Fish,Mesopelagic
+GYJ,Gymnoscopelus hintonoides,,Fish,Mesopelagic
+GYN,Gymnoscopelus nicholsi,Nichol's lanternfish,Fish,Mesopelagic
+GYO,Gymnoscopelus opisthopterus,Lanternfish,Fish,Mesopelagic
+GYR,Gymnoscopelus braueri,Lanternfish,Fish,Mesopelagic
+GYY,Gymnoscopelus spp,Lanternfish,Fish,Mesopelagic
+HAN,Bythaelurus canescens,Dusky catshark,Chondrichthyes,Shark
+HBE,Halobaena caerulea,Blue petrel,Bird,Flying Bird
+HBG,Harpagifer georgianus,S. Georgia spiny plunderfish,Fish,Other
+HEP,Clupea pallasii,Pacific herring,Fish,Mesopelagic
+HER,Clupea harengus,Atlantic herring,Fish,NA
+HGW,Harpagifer antarcticus,Antarctic spiny plunderfish,Fish,Other
+HHJ,Achiropsetta tricholepis,Prickly flounder,Fish,Other
+HIB,Histiobranchus bathybius,Deep-water arrowtooth eel,Fish,Other
+HIV,Histiodraco velifer,,Fish,Other
+HKN,Merluccius australis,Southern hake,Fish,Other
+HKP,Merluccius hubbsi,Argentine hake,Fish,Other
+HOL,Chimaeriformes,"Chimaeras, etc. nei",Fish,Other
+HQZ,Hydrozoa,Hydrozoans,Benthos,Benthos
+HRD,Lagenorhynchus cruciger,Hourglass dolphin,Marine Mammal,Toothed whale
+HUW,Megaptera novaeangliae,Humpback whale,Marine Mammal,Baleen
+HXY,Hexactinellida,Glass sponges,Benthos,Benthos
+HYD,Hydrolagus spp,Ratfishes nei,Chondrichthyes,Shark
+ICA,Icichthys australis,Southern driftfish,Fish,Other
+ICK,Cryodraco atkinsoni,,Fish,Channichthyidae
+ICX,Channichthyidae,Crocodile icefishes nei,Fish,Channichthyidae
+INV,Invertebrata,Aquatic invertebrates nei,Benthos,Benthos
+ISH,Isopoda,"Isopods, pillbugs, sowbugs",Benthos,Benthos
+ISQ,Phalacrocorax atriceps,Imperial shag,Bird,Flying Bird
+JAX,Trachurus spp,Jack and horse mackerels nei,Fish,Other
+JIC,Neopagetopsis ionah,Jonah's icefish,Fish,Channichthyidae
+KCF,Paralomis formosa,Globose king crab,Crustacea,Crab
+KCM,Lithodes murrayi,Subantarctic stone crab,Crustacea,Crab
+KCS,Paralithodes spp,King crabs,Crustacea,Crab
+KCU,Paralomis aculeata,Red stone crab,Crustacea,Crab
+KCV,Paralomis spinosissima,Antarctic stone crab,Crustacea,Crab
+KCX,Lithodidae,"King crabs, stone crabs nei",Crustacea,Crab
+KCZ,Lithodes spp,King crabs nei,Crustacea,Crab
+KDD,Paralomis anamerae,,Crustacea,Crab
+KFY,Aptenodytes forsteri,Emperor penguin,Bird,Penguin
+KIF,Chionodraco rastrospinosus,Ocellated icefish,Fish,Channichthyidae
+KIW,Orcinus orca,Killer whale,Marine Mammal,Toothed whale
+KPY,Aptenodytes patagonicus,King penguin,Bird,Penguin
+KRA,Krefftichthys anderssoni,Lanternfish spp.,Fish,Mesopelagic
+KRC,Euphausia crystallorophias,Ice krill,Zooplankton,Krill
+KRI,Euphausia superba,Antarctic krill,Zooplankton,Krill
+KRM,Thysanoessa macrura,Bigeye krill,Crustacea,NA
+KRT,Euphausia triacantha,Spiny krill,Zooplankton,Krill
+KRV,Euphausia vallentini,Northern krill,Zooplankton,Krill
+KRX,Euphausia spp,Antarctic krill nei,Zooplankton,Krill
+KZU,Labidiaster annulatus,,NA,NA
+LAC,Nannobrachium achirus,Lantern fish,Fish,Mesopelagic
+LAG,Lampris guttatus,Opah,Fish,Other
+LAI,Lampris immaculatus,Southern opah,Fish,Other
+LCN,Lycodichthys antarcticus,Eelpout,Fish,Other
+LDO,Larus dominicanus,Kelp gull,Bird,Flying Bird
+LEF,Bothidae,Lefteye flounders nei,Fish,Other
+LEV,Lepidion spp,Lepidion codlings nei,Fish,Other
+LIC,Channichthys rhinoceratus,Unicorn icefish,Fish,Channichthyidae
+LPE,Lepidion ensiferus,Patagonian codling,Fish,Other
+LPX,Liparidae,Snailfishes nei,Fish,NA
+LRD,Laridae,Gulls,Bird,Flying Bird
+LVD,Zoarcidae,Eelpouts nei,Fish,NA
+LVP,Lycodapus pachysoma,Stout slipskin,Fish,Other
+LWY,Lycenchelys antarctica,,Fish,Other
+LXX,Myctophidae,Lanternfishes nei,Fish,Mesopelagic
+LXY,Lycodapus spp,,Fish,Other
+LYA,Ophthalmolycus amberensis,Eelpout,Fish,Other
+LYZ,Lycodapus antarcticus,,NA,NA
+MAH,Macronectes halli,Hall's giant petrel,Bird,Flying Bird
+MAI,Macronectes giganteus,Antarctic giant petrel,Bird,Flying Bird
+MAM,Mammalia,Aquatic mammals nei,Marine Mammal,Mammals
+MAP,Magnisudis prionosa,Southern barracudina,Fish,Other
+MAS,Scomber japonicus,Pacific chub mackerel,Fish,Other
+MAX,Scombridae,Mackerels nei,Fish,Other
+MBX,Macronectes spp,Giant petrels nei,Bird,Flying Bird
+MCC,Macrourus carinatus,Ridge scaled rattail,Fish,Macrouridae
+MCH,Macrourus holotrachys,Bigeye grenadier,Fish,Macrouridae
+MCK,Coelorinchus kaiyomaru,Campbell whiptail,Fish,Macrouridae
+MCM,Coryphaenoides murrayi,Abyssal rattail,Fish,Macrouridae
+MDR,Cygnodraco mawsoni,Mawson's dragonfish,Fish,Bathydraconidae
+MEL,Melanostigma spp,Eelpout spp.,Fish,Other
+MHJ,Halargyreus johnsonii,Slender codling,Fish,Other
+MIC,Chionodraco myersi,Myers' icefish,Fish,Channichthyidae
+MIW,Balaenoptera acutorostrata,Minke whale,Marine Mammal,Baleen
+MLG,Melanonus gracilis,Pelagic cod,Fish,NA
+MMM,Mancopsetta maculata,Antarctic armless flounder,Fish,Other
+MNI,Cynomacrurus piriei,Dogtooth grenadier,Fish,Macrouridae
+MOL,Mollusca,Marine molluscs nei,Benthos,Benthos
+MOR,Moridae,Moras nei,Fish,Other
+MOU,Monodactylus argenteus,Silver moony,Fish,NA
+MOY,Muraenolepis microps,Smalleye moray cod,Fish,Other
+MPH,Amphichaetodon howensis,Lord Howe Island butterflyfish,Fish,NA
+MRL,Muraenolepis spp,Moray cods nei,Fish,Other
+MUL,Mugilidae,Mullets nei,Fish,Other
+MVC,Muraenolepis marmorata,Marbled moray cod,Fish,Other
+MWG,Melanostigma gelatinosum,Limp eelpout,Fish,Other
+MWO,Muraenolepis orangiensis,Patagonian moray cod,Fish,Other
+MWS,Notomuraenobathys microcephalus,Smallhead moray cod,Fish,Other
+MYC,Mytilus chilensis,Chilean mussel,Benthos,Benthos
+MYS,Mysticeti,Baleen whales nei,Marine Mammal,Baleen
+MZZ,Actinopterygii,Marine fishes nei,Fish,Other
+NAN,Nansenia spp,Smelts,Fish,Other
+NDW,Neolithodes diomedeae,Antarctic king crab,Crustacea,Crab
+NER,Hediste diversicolor,Ragworm,Benthos,Benthos
+NEX,Nephropidae,"True lobsters,lobsterettes nei",Crustacea,Lobster
+NHE,Annelida,Annelid worms,Benthos,Benthos
+NNN,Notacanthus chemnitzii,Spiny eel,Fish,Other
+NNV,Notolepis annulata,Ringed barracudina,Fish,Other
+NNY,Nototheniops nybelini,Rockcod,Fish,Nototheniidae
+NOA,Gobionotothen acuta,Triangular rockcod,Fish,Nototheniidae
+NOC,Notothenia coriiceps,Black rockcod,Fish,Nototheniidae
+NOD,Lindbergichthys nudifrons,Yellowfin notie,Fish,Nototheniidae
+NOE,Notolepis spp,Barracudinas nei,Fish,Other
+NOF,Gobionotothen angustifrons,Narrowhead rockcod,Fish,Nototheniidae
+NOG,Gobionotothen gibberifrons,Humped rockcod,Fish,Nototheniidae
+NOL,Nototheniops larseni,Painted notie,Fish,Nototheniidae
+NOM,Paranotothenia magellanica,Magellanic rockcod,Fish,Nototheniidae
+NON,Notothenia neglecta,Yellowbelly rockcod,Fish,Nototheniidae
+NOR,Notothenia rossii,Marbled rockcod,Fish,Nototheniidae
+NOS,Lepidonotothen squamifrons,Striped-eyed rockcod,Fish,Nototheniidae
+NOT,Patagonotothen brevicauda,Patagonian rockcod,Fish,Nototheniidae
+NOX,Nototheniidae,"Antarctic rockcods, noties nei",Fish,Nototheniidae
+NOZ,Lindbergichthys mizops,Toad notie,Fish,Nototheniidae
+NSZ,Nansenia antarctica,,Fish,Other
+NTO,Notolepis coatsi,Antarctic jonasfish,Fish,Other
+NTR,Notropis heterolepis,Blacknose shiner,Fish,Other
+NTW,Pennatulacea,Sea pens,Benthos,Benthos
+NYM,Gobionotothen marionensis,Lobe-lip notothen,Fish,Nototheniidae
+OCO,Oceanites oceanicus,Wilson's storm petrel,Bird,Flying Bird
+OCP,Ocosia apia,,Fish,Other
+OCT,Octopodidae,"Octopuses, etc. nei",Cephalopod,Cephalopod
+OEQ,Euryalida,Basket stars,Benthos,Benthos
+OHZ,Ophthalmolycus spp,,Benthos,Benthos
+OIJ,Moroteuthopsis ingens,Greater hooked squid,Cephalopod,Cephalopod
+OOY,Ophiurida,Brittle and snake stars,Benthos,Benthos
+OPH,Ophidiidae,"Cusk-eels, brotulas nei",Fish,NA
+ORD,Oreosomatidae,Oreo dories nei,Fish,Other
+OSG,Spectrunculus grandis,Pudgy cuskeel,Fish,NA
+OWP,Ophiuroidea,"Basket, brittle, snake stars",Benthos,Benthos
+PAB,Pagothenia brachysoma,Stocky rockcod,Fish,NA
+PAG,Paralomis granulosa,Softshell red crab,Crustacea,Crab
+PAI,Paralomis spp,Crabs,Crustacea,Crab
+PAZ,Neoachiropsetta milfordi,Finless flounder,Fish,Other
+PBQ,Graptolithoidea,Pterobranchs,Benthos,Benthos
+PCH,Parachaenichthys charcoti,Antarctic dragonfishes,Fish,Bathydraconidae
+PCI,Procellaria cinerea,Grey petrel,Bird,Flying Bird
+PCN,Procellaria conspicillata,Spectacled petrel,Bird,Flying Bird
+PCW,Procellaria westlandica,Westland petrel,Bird,Flying Bird
+PDG,Paradiplospinus gracilis,Slender escolar,Fish,Other
+PDM,Pterodroma macroptera,Great-winged petrel,Bird,Flying Bird
+PDZ,Pandalidae,Pandalid shrimps nei,Crustacea,NA
+PEF,Psychrolutes macrocephalus,,NA,NA
+PEN,Penaeus spp,Penaeus shrimps nei,Crustacea,Shrimp
+PEV,Prionodraco evansii,Dragonfish spp.,Fish,Bathydraconidae
+PEY,Scopelarchidae,"Pearleyes, etc. nei",Fish,Other
+PFC,Puffinus carneipes,Flesh-footed shearwater,Bird,Flying Bird
+PFG,Puffinus griseus,Sooty shearwater,Bird,Flying Bird
+PFR,Porifera,Sponges,Benthos,Benthos
+PFT,Puffinus tenuirostris,Short-tailed shearwater,Bird,Flying Bird
+PGE,Parachaenichthys georgianus,Bathydraconidae,Fish,Bathydraconidae
+PGM,Pogonophryne marmorata,Marbled plunderfish,Fish,Other
+PGR,Pogonophryne permitini,Plunderfish,Fish,Other
+PHB,Pachycara brachycephalum,Eelpout,Fish,Other
+PHE,Phoebetria palpebrata,Light-mantled sooty albatross,Bird,Flying Bird
+PHU,Phoebetria fusca,Sooty albatross,Bird,Flying Bird
+PIV,Edentoliparis terraenovae,,Fish,Other
+PIW,Globicephala melas,Long-finned pilot whale,Marine Mammal,Toothed whale
+PLF,Artedidraconidae,Barbeled plunderfishes nei,Fish,Other
+PLG,Paraliparis gracilis,Flatfish,Fish,Other
+PMA,Pagetopsis macropterus,Icefish spp.,Fish,Channichthyidae
+PMC,Poromitra crassiceps,Crested bigscale,Fish,Other
+POA,Brama brama,Atlantic pomfret,Fish,Other
+POC,Boreogadus saida,Polar cod,Fish,Other
+POG,Pogonophryne spp,Plunderfish,Fish,Other
+POR,Lamna nasus,Porbeagle,Chondrichthyes,Shark
+POS,Micromesistius australis,Southern blue whiting,Fish,Other
+PPN,Paraliparis antarcticus,Baltic Prawn,Crustacea,Shrimp
+PRD,Pareledone spp,Antarctic octopuses,Cephalopod,Cephalopod
+PRE,Protomyctophum tenisoni,,Fish,Mesopelagic
+PRG,Calamus spp,Porgies,Fish,Other
+PRK,Procellaria parkinsoni,Parkinson's petrel,Bird,Flying Bird
+PRM,Protomyctophum bolini,Lanternfish,Fish,Mesopelagic
+PRO,Procellaria aequinoctialis,White-chinned petrel,Bird,Flying Bird
+PRT,Pyropia tenera,Laver (Nori),Benthos,Benthos
+PRX,Procellariidae,Petrels and shearwaters nei,Bird,Flying Bird
+PRY,Protomyctophum choriodon,Lanternfish,Fish,Mesopelagic
+PSG,Psychroteuthis glacialis,Glacial squid,Cephalopod,Cephalopod
+PSR,Psilodraco breviceps,Dragonfish spp.,Fish,Bathydraconidae
+PTC,Trematomus pennellii,Sharp-spined notothenia,Fish,Nototheniidae
+PTZ,Procellaria spp,Petrels nei,Bird,Flying Bird
+PUC,Puffinus creatopus,Pink-footed shearwater,Bird,Flying Bird
+PUG,Puffinus gravis,Great shearwater,Bird,Flying Bird
+PVB,Aphrodroma brevirostris,Kerguelen petrel,Bird,Flying Bird
+PVF,Spheniscidae,Penguins nei,Bird,Penguin
+PVH,Pterodroma inexpectata,Mottled petrel,Bird,Flying Bird
+PVM,Paraliparis meganchus,Slit branchial paraliparis,Fish,Other
+PVP,Protomyctophum spp,,Fish,Mesopelagic
+PVZ,Paraliparis spp,,Fish,Other
+PWD,Pachyptila desolata,Antarctic prion,Bird,Flying Bird
+PWH,Parachaenichthys spp,,Fish,Bathydraconidae
+PWJ,Pycnogonida,Sea spiders,Benthos,Benthos
+PWL,Pterodroma lessonii,White-headed petrel,Bird,Flying Bird
+PWP,Pagodroma nivea,Lesser snow petrel,Bird,Flying Bird
+PWR,Pachycara spp,,Fish,Other
+PWW,Pagodroma spp,Snow petrels nei,Bird,Flying Bird
+PWX,Pachyptila spp,Prions nei,Bird,Flying Bird
+PWZ,Pagodroma nivea major,Greater snow petrel,Bird,Flying Bird
+PXD,Paraliparis tetrapteryx,,Fish,Other
+PYD,Pygoscelis adeliae,Adelie penguin,Bird,Penguin
+PYN,Pygoscelis antarcticus,Chinstrap penguin,Bird,Penguin
+PYP,Pygoscelis papua,Gentoo penguin,Bird,Penguin
+PZK,Pagetopsis spp,,NA,NA
+PZS,Pagetopsis maculata,,Fish,Channichthyidae
+QCX,Gorgonocephalus spp,Gorgons head basket-stars nei,Fish,NA
+QMC,Macrourus caml,Caml grenadier,Fish,Macrouridae
+QQP,Pelecanoides spp,Petrels nei,Bird,NA
+RAJ,Rajidae,Rays and skates nei,Chondrichthyes,Skate
+RFA,Amblyraja taaf,Whiteleg skate,Chondrichthyes,Skate
+RFD,Paraliparis kerguelensis,,NA,NA
+RGG,Racovitzia glacialis,Dragonfish spp.,Fish,Bathydraconidae
+RHG,Macrourus berglax,Roughhead grenadier,Fish,Macrouridae
+RNG,Coryphaenoides rupestris,Roundnose grenadier,Fish,Macrouridae
+RPG,Pagrus pagrus,Red porgy,Fish,Other
+RQX,Stomiidae,Barbeled dragonfishes,Fish,NA
+RSW,Lissodelphis peronii,Southern right whale dolphin,Marine Mammal,Toothed whale
+RTX,Macrouridae,"Grenadiers, rattails nei",Fish,Macrouridae
+RZZ,Somniosus antarcticus,Southern sleeper shark,Chondrichthyes,NA
+SAO,Salilota australis,Tadpole codling,Fish,Other
+SAP,Cololabis saira,Pacific saury,Fish,Other
+SBB,Stomias boa,Boa dragonfish,Fish,Other
+SCO,Scorpaenidae,"Scorpionfishes, redfishes nei",Fish,Other
+SCX,Pectinidae,Scallops nei,Benthos,Benthos
+SDP,Mustelus schmitti,Narrownose smooth-hound,Fish,Other
+SEA,Arctocephalus gazella,Antarctic fur seal,Marine Mammal,Seal
+SEL,Otaria byronia,South American sea lion,Marine Mammal,Seal
+SES,Mirounga leonina,Southern elephant seal,Marine Mammal,Seal
+SET,Lobodon carcinophagus,Crabeater seal,Marine Mammal,Seal
+SEX,Eurypharynx pelecanoides,Pelican eel,Bird,Flying Bird
+SGI,Pseudochaenichthys georgianus,South Georgia icefish,Fish,Channichthyidae
+SHL,Etmopterus spp,Lanternsharks nei,Chondrichthyes,Shark
+SHW,Globicephala macrorhynchus,Short-finned pilot whale,Marine Mammal,Toothed whale
+SIW,Balaenoptera borealis,Sei whale,Marine Mammal,Baleen
+SIX,Sardinella spp,Sardinellas nei,Fish,Mesopelagic
+SKX,Elasmobranchii,"Sharks, rays, skates, etc. nei",Chondrichthyes,Shark
+SKZ,Stercorariidae,Skuas,Bird,Flying Bird
+SLH,Scopelosaurus hamiltoni,Grinner,Fish,Other
+SLP,Hydrurga leptonyx,Leopard seal,Marine Mammal,Seal
+SLW,Leptonychotes weddellii,Weddell seal,Marine Mammal,Seal
+SNK,Thyrsites atun,Snoek,Fish,Other
+SON,Somniosus pacificus,Pacific sleeper shark,Chondrichthyes,Shark
+SOR,Somniosus rostratus,Little sleeper shark,Chondrichthyes,NA
+SPP,Phocoena dioptrica,Spectacled porpoise,Marine Mammal,Toothed whale
+SPW,Physeter macrocephalus,Sperm whale,Marine Mammal,Toothed whale
+SPX,Salpidae,Salps,Zooplankton,Zooplankton
+SQ1,"Ommastrephes, Illex",,Cephalopod,NA
+SQA,Illex argentinus,Argentine shortfin squid,Cephalopod,Cephalopod
+SQC,Loligo spp,Common squids nei,Cephalopod,Cephalopod
+SQI,Illex illecebrosus,Northern shortfin squid,Cephalopod,NA
+SQS,Martialia hyadesi,Sevenstar flying squid,Cephalopod,Cephalopod
+SQU,"Loliginidae, Ommastrephidae",Various squids nei,Cephalopod,Cephalopod
+SRR,Amblyraja georgiana,Antarctic starry skate,Chondrichthyes,Skate
+SRS,Ommatophoca rossii,Ross seal,Marine Mammal,Seal
+SRW,Hyperoodon planifrons,Southern bottlenose whale,Marine Mammal,Toothed whale
+SRX,Rajiformes,"Rays, stingrays, mantas nei",Chondrichthyes,Skate
+SSI,Chaenocephalus aceratus,Blackfin icefish,Fish,Channichthyidae
+SSX,Ascidiacea,Sea squirts nei,Benthos,Benthos
+STF,Asteroidea,Starfishes nei,Benthos,Benthos
+STO,Stolephorus spp,Stolephorus anchovies nei,Fish,NA
+SUY,Stauroteuthis syrtensis,Squid,Cephalopod,Cephalopod
+SVI,Sterna vittata,Antarctic tern,Bird,Flying Bird
+SVY,Synaphobranchidae,Cutthroat eels nei,Fish,NA
+SWK,Stomias spp,,NA,NA
+SWS,Chionis alba,Snowy sheathbill,Bird,Flying Bird
+SWX,Algae,Seaweeds nei,Benthos,Benthos
+SXX,"Otariidae, Phocidae",Seals and sea lions nei,Marine Mammal,Seal
+SZS,Serpulidae,Serpulid tube worms,Benthos,Benthos
+SZT,Pogonophryne scotti,,Fish,Other
+TAA,Thalassoica antarctica,Antarctic petrel,Bird,Flying Bird
+TEZ,Paradiplospinus antarcticus,Antarctic escolar,Fish,Other
+TFH,Stercorarius skua,Skua,Bird,NA
+TIC,Chionodraco hamatus,,Fish,Channichthyidae
+TLO,Trematomus loennbergii,Scaly rockcod,Fish,Nototheniidae
+TMW,Trematomus vicarius,Orange notothen,Fish,Nototheniidae
+TOA,Dissostichus mawsoni,Antarctic toothfish,Fish,Nototheniidae
+TOP,Dissostichus eleginoides,Patagonian toothfish,Fish,Nototheniidae
+TOT,Dissostichus spp,Antarctic toothfishes nei,Fish,Nototheniidae
+TQB,Thymops birsteini,Southern lobsterette,Crustacea,Lobster
+TQW,Thalassarche impavida,Campbell albatross,Bird,Flying Bird
+TRD,Trematomus lepidorhinus,Slender scalyhead,Fish,Nototheniidae
+TRH,Trematomus hansoni,Striped rockcod,Fish,Nototheniidae
+TRL,Trematomus eulepidotus,Blunt scalyhead,Fish,Nototheniidae
+TRM,Trematomus scotti,Crowned rockcod,Fish,Nototheniidae
+TRN,Trematomus nicolai,Spotted notothen,Fish,Nototheniidae
+TRT,Trematomus spp,Trematomus nei,Fish,Nototheniidae
+TRW,Trematomus newnesi,Dusky rockcod,Fish,Nototheniidae
+TSQ,Nototodarus sloanii,Wellington flying squid,Cephalopod,Cephalopod
+TTK,Trematomus tokarevi,Bigeye notothen,Fish,Nototheniidae
+TWP,Adelieledone polymorpha,Antarctic knobbed octopus,Cephalopod,Cephalopod
+TWT,Pareledone turqueti,Turquet's octopus,Cephalopod,Cephalopod
+UHK,Filippovia knipovitchi,Smooth hooked squid,Cephalopod,Cephalopod
+UHX,Onykia spp,Hooked squids nei,Cephalopod,Cephalopod
+UMA,Pseudomancopsetta andriashevi,Pigmy flounder,Fish,Other
+UN1,Unknown,,NA,NA
+URX,Echinoidea,"Sea urchins, etc. nei",Benthos,Benthos
+VMA,Scomber colias,Atlantic chub mackerel,Fish,NA
+VOI,Vomeridens infuscipinnis,,Fish,Bathydraconidae
+VSH,Scopelosaurus spp,,Fish,Other
+WCA,Cetacea,Whales nei,Marine mammal,NA
+WG2,Macrourus sp. A,,Fish,Macrouridae
+WGR,Macrourus whitsoni,Whitson's grenadier,Fish,Macrouridae
+WHB,Micromesistius poutassou,Blue whiting(=Poutassou),Fish,Other
+WIC,Chaenodraco wilsoni,Spiny icefish,Fish,Channichthyidae
+WKS,Cynoscion striatus,Striped weakfish,Fish,Other
+WKX,Cynoscion spp,Weakfishes nei,Fish,Other
+WOR,Polychaeta,Marine worms,Benthos,Benthos
+XEF,Xenophyophoroidea,Xenophyophores,Benthos,Benthos
+YDB,Cryodraco spp,,Fish,Channichthyidae
+YOQ,Cryothenia peninsulae,Pithead,Fish,Nototheniidae
+ZGL,Genioliparis lindbergi,Cyclopteridae,Fish,Other
+ZLS,Cyclopteridae,Lumpfishes nei,Fish,Other
+ZOT,Zoantharia,Zoanthids,Benthos,Benthos
+ZOX,Otariidae,Sea lions and fur seals nei,Marine Mammal,Seal
+ZPX,Phocidae,Seals nei,Marine Mammal,Seal
+ZSP,Zanclorhynchus spinifer,Antarctic horsefish,Fish,Other

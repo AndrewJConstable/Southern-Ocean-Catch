@@ -1,39 +1,105 @@
 ############# data files needed to support analyses #######################
 
+#### Data Input Flags ####
 
-# files from CCAMLR Statistical Bulletin 2019
+checkTaxa_keepTaxaCodesNotPresent<-FALSE
+checkTaxa_keepNewTaxaCodes<-TRUE
 
-CSBdata           <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/AggregatedFisheryCatch.csv',sep="")
+#### CCAMLR Statistical Bulletin (CSB) ####
+##### Instructions for updating to a different statistical bulletin
+# 1. check column headings are the same.  If not, there may be implications for the code
+
+# Volume 34, downloaded 18 July 2023
+
+dirCCAMLRstatisticalBulletin<-"/Users/andreworca/Desktop/_w/_d/CCAMLR_Statistical_Bulletin_Volume_34/catch_and_effort/"
+
+CDcatch           <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"catch.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CEdata            <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/AggregatedFisheryEffort.csv',sep="")
+CDeffort          <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"effort.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRcountry         <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataCountry.csv',sep="")
+CRcountry         <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"country.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRfishingActivity <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataFishingActivity.csv',sep="")
+CRfishingPurpose  <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"fishing_purpose.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRfishingGear     <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataFishingGear.csv',sep="")
+CRfishingGear     <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"fishing_gear.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CRgeographicArea  <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataGeographicArea_to_MEASO.csv',sep="")
+CRasd             <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"area.csv",sep="") 
                               , header = TRUE, sep = ",", dec = ".")
-CRvesselSize      <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataVesselSize.csv',sep="")
+CRvesselSize      <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"vessel_size.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
-CSB_taxa          <-read.csv2(paste(WorkDir,'CCAMLR_2019_Stat_Bull_data_Files/ReferenceDataTaxon_MEASO.csv',sep="")
+CRtaxa            <-read.csv2(paste(dirCCAMLRstatisticalBulletin,"taxon.csv",sep="")
                               , header = TRUE, sep = ",", dec = ".")
 
-# files with results from manual assignment of records to location of fishing gears - bottom (B) or midwater (M)
+#### Create CSB_taxa from CSB file and grouping file ####
+# Steps:
+#   place file of taxon groups in '.\In' folder - requires two variables taxon_code, Taxa_Group
+#   run this code
+#   check taxon codes have not been altered and add taxon groupings for analysis as needed  if so add assignment in group input file & rerun this code
 
-data_Location_B_M_Step_1<-read.csv2('B-M Step1.csv'
-                                    , header = TRUE, sep = ",", dec = ".")
-data_Location_B_M_Step_2<-read.csv2('B-M Step2.csv'
-                                    , header = TRUE, sep = ",", dec = ".")
+      fileTaxonGroups<-"CSB_taxon_to_Groups.csv"
 
-# file with Toothfish IUU catch from CCAMLR Fishery Reports
-Toothfish_IUU     <-read.csv2('/Users/andreworca/Desktop/_wAAD/_d/Catch/CCAMLR Fishery Reports Toothfish IUU Catch.csv'
-                              , header = TRUE, sep = ",", dec = ".")
+   if (!file.exists(file.path(dirIn,fileTaxonGroups)))  "Taxon Group file does not exist in In directory" else {
+     TaxonGroups<-read.csv2(file.path(dirIn,fileTaxonGroups), header = TRUE, sep = ",", dec = ".")
+     CSB_taxa<-merge(CRtaxa,subset(TaxonGroups,select= -c(taxon_scientific_name,taxon_vernacular_name)),by=c("taxon_code"),all=TRUE)
+     TaxaCheck<-CSB_taxa
+     # check taxon codes no longer present (or have changed)
+
+     Taxon_Codes_Not_Present<-!(CSB_taxa[,"taxon_code"] %in% CRtaxa[,"taxon_code"])
+     if(sum(Taxon_Codes_Not_Present)>1) {
+        print("Taxon Codes no longer present - check variable ABSENT in file")
+        print(file.path(dirIn,"file_check_taxa","taxa_missing.csv"))
+        vNames<-c(dimnames(TaxaCheck)[[2]],"ABSENT")
+        TaxaCheck<-cbind(TaxaCheck,rep(0,nrow(TaxaCheck)))
+        dimnames(TaxaCheck)[[2]]<-vNames
+        TaxaCheck[Taxon_Codes_Not_Present,"ABSENT"]<-1
+     } else print("Previous Taxon Codes all present")
+
+      # check all taxa have groups
+     Taxon_Groups_Not_Present<-is.na(CSB_taxa[,ncol(CSB_taxa)])
+     if(sum(Taxon_Groups_Not_Present)>1) {
+          print("Not all taxa have been assigned to groups - check variable NO_GROUP in file")
+          print(file.path(dirIn,"file_check_taxa","taxa_no_group.csv"))
+          vNames<-c(dimnames(TaxaCheck)[[2]],"NO_GROUP")
+          TaxaCheck<-cbind(TaxaCheck,rep(0,nrow(TaxaCheck)))
+          dimnames(TaxaCheck)[[2]]<-vNames
+          TaxaCheck[Taxon_Groups_Not_Present,"NO_GROUP"]<-1
+        } else print("All taxa assigned to groups")
+
+if(sum(c(Taxon_Codes_Not_Present,Taxon_Groups_Not_Present))) {
+  if (!file.exists(file.path(dirIn,"file_check_taxa"))) dir.create(file.path(dirIn,"file_check_taxa"))
+  if(file.exists(file.path(dirIn,"file_check_taxa","taxa_check.csv"))) unlink(file.path(dirIn,"file_check_taxa","taxa_check.csv"))
+  write.csv(TaxaCheck,file.path(dirIn,"file_check_taxa","taxa_check.csv"),row.names=FALSE)
+   }
+
+  # excluding those not wishing to be kept        
+   if(!checkTaxa_keepTaxaCodesNotPresent){
+     if(!checkTaxa_keepNewTaxaCodes) CSB_taxa<-CSB_taxa[(!Taxon_Codes_Not_Present & !checkTaxa_keepNewTaxaCodes),] else CSB_taxa<-CSB_taxa[!Taxon_Codes_Not_Present,]
+     } 
+      
+   rm(TaxaCheck,Taxon_Codes_Not_Present,Taxon_Groups_Not_Present,vNames)
+
+   } # end if not file exists
+
+
+#### Input manual assignment of records to location of fishing gears - bottom (B) or midwater (M) ####
+# these files are essential for assignment of ambiguous records in the early years of CCAMLR
+
+if (!file.exists(file.path(dirIn,"B-M Step1.csv")))  "Manual Assignment of Gears for Step 1 does not exist in In directory" else
+  data_Location_B_M_Step_1<-read.csv2(file.path(dirIn,"B-M Step1.csv"), header = TRUE, sep = ",", dec = ".")
+  
+if (!file.exists(file.path(dirIn,"B-M Step2.csv")))  "Manual Assignment of Gears for Step 2 does not exist in In directory" else
+  data_Location_B_M_Step_1<-read.csv2(file.path(dirIn,"B-M Step2.csv"), header = TRUE, sep = ",", dec = ".")
+
+##### Input Toothfish IUU catch from CCAMLR Fishery Reports ####
+
+if (!file.exists(file.path(dirIn,"CCAMLR Fishery Reports Toothfish IUU Catch.csv")))  "IUU toothfish catch is not in the In directory" else
+  Toothfish_IUU<-read.csv2(file.path(dirIn,"CCAMLR Fishery Reports Toothfish IUU Catch.csv"), header = TRUE, sep = ",", dec = ".")
+
+
+#### load bathymetry and assign cells to CCAMLR and output shapes ####
 
 # for distribution of catches among MEASO areas
 Seabed_file<-"/Users/andreworca/Desktop/_wAAD/_d/seabed GEBCO/GEBCO_cells_ASD_MEASO_ssmu_ssru.rds"
-
 
 ################# input data to support analyses #################
 
@@ -148,8 +214,7 @@ ASDareas<-matrix(c(  "48.1","481","Antarctic Peninsula"
 ),byrow=TRUE,ncol=3)
 dimnames(ASDareas)[[2]]<-c("Code","CodeAlt","Name")
 
-#####################################################################
-# Map grid and projection
+#### Map grid and projection ####
 prj <- "+proj=laea +lat_0=-90 +datum=WGS84"
 template <- raster(extent(-5398000, 5386000, -5260000, 5570000)
                    , nrows = 5415, ncols = 5392, crs = prj)
